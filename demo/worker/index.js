@@ -12,6 +12,24 @@ const PONT_TIMEOUT = 10 * 60 * 1000; // un dossier pris par le pont et sans rép
 const PONT_ONLINE = 45 * 1000;
 const CHUNK = 40_000; // caractères par tranche de contrat stockée // le pont est « en ligne » s'il a interrogé la file depuis moins de 45 s
 
+const QUOTA_IP = 60; // lectures par adresse et par jour (un jury derrière une même adresse doit pouvoir tester)
+const QUOTA_JOUR = 400; // lectures par jour, toutes adresses confondues
+
+// Empreinte de l'adresse IP : hachée avec le jour et un secret, jamais stockée en clair, inutilisable le lendemain.
+async function empreinte(request, env) {
+  const ip = request.headers.get("cf-connecting-ip") || "inconnue";
+  const data = new TextEncoder().encode(`${ip}|${new Date().toISOString().slice(0, 10)}|${env.PONT_TOKEN || "custodix"}`);
+  const h = new Uint8Array(await crypto.subtle.digest("SHA-256", data));
+  return [...h.slice(0, 12)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+const SECURITE = { "x-content-type-options": "nosniff", "referrer-policy": "strict-origin-when-cross-origin", "x-frame-options": "SAMEORIGIN", "permissions-policy": "camera=(), microphone=(), geolocation=()" };
+function avecEntetes(res) {
+  const r = new Response(res.body, res);
+  for (const [k, v] of Object.entries(SECURITE)) r.headers.set(k, v);
+  return r;
+}
+
 const ok = (data, status = 200) => Response.json(data, { status });
 // Les dossiers créés avant le 6 novembre portaient le nom du modèle dans l'étiquette du moteur : on l'efface à l'affichage.
 const neutre = (moteur) => (moteur || "").replace(/^claude\S*/i, "lecture intégrale v1");
@@ -77,6 +95,35 @@ export class Registre extends DurableObject {
       verdict: d.resultat?.verdict || null, score: d.resultat?.score ?? null, moteur: neutre(d.resultat?.meta?.moteur) || null,
       validation: d.validation ? { nom: d.validation.nom, role: d.validation.role, iso: d.validation.iso } : null,
     }));
+  }
+
+  // Plafond de lectures : chaque lecture mobilise le lecteur du cabinet, on borne par adresse et au total, par jour.
+  async quota(empreinte) {
+    const jour = new Date().toISOString().slice(0, 10);
+    const kTotal = `q:${jour}:total`, kIp = `q:${jour}:${empreinte}`;
+    const [total, parIp] = await Promise.all([this.ctx.storage.get(kTotal), this.ctx.storage.get(kIp)]);
+    if (!total) { // premier passage du jour : on efface les compteurs des jours précédents
+      const vieux = [...(await this.ctx.storage.list({ prefix: "q:" })).keys()].filter((k) => !k.startsWith(`q:${jour}:`));
+      for (let i = 0; i < vieux.length; i += 128) await this.ctx.storage.delete(vieux.slice(i, i + 128));
+    }
+    if ((parIp || 0) >= QUOTA_IP) return { ok: false, erreur: `Limite de ${QUOTA_IP} lectures par jour atteinte pour votre adresse. Réessayez demain ou utilisez les règles locales.` };
+    if ((total || 0) >= QUOTA_JOUR) return { ok: false, erreur: "Le nombre de lectures de la journée est atteint. Réessayez demain ou utilisez les règles locales." };
+    await this.ctx.storage.put({ [kTotal]: (total || 0) + 1, [kIp]: (parIp || 0) + 1 });
+    return { ok: true };
+  }
+
+  // Mesure d'audience sans cookie : un compteur de visites de la page d'accueil par jour, rien d'autre.
+  async visite() {
+    const k = `v:${new Date().toISOString().slice(0, 10)}`;
+    await this.ctx.storage.put(k, ((await this.ctx.storage.get(k)) || 0) + 1);
+  }
+
+  async stats() {
+    const visites = Object.fromEntries([...(await this.ctx.storage.list({ prefix: "v:" })).entries()].map(([k, v]) => [k.slice(2), v]));
+    const dossiers = {}, conversations = {};
+    for (const d of (await this.ctx.storage.list({ prefix: "dossier:" })).values()) { const j = new Date(d.cree).toISOString().slice(0, 10); dossiers[j] = (dossiers[j] || 0) + 1; }
+    for (const c of (await this.ctx.storage.list({ prefix: "conv:" })).values()) { if (!c.messages?.length) continue; const j = new Date(c.cree).toISOString().slice(0, 10); conversations[j] = (conversations[j] || 0) + 1; }
+    return { visites, dossiers, conversations };
   }
 
   async etat() {
@@ -275,13 +322,40 @@ function fmtDateTime(iso) {
 // Nettoyage et validation du dossier reçu du navigateur.
 const CATEGORIES = new Set(["chatbot", "rh", "marketing", "support", "documents", "code", "autre"]);
 const DATA = new Set(["aucune", "clients", "rh", "sante", "confidentiel", "code"]);
+// Valeurs reçues d'un formulaire ou d'un assistant : on accepte les variantes courantes, on refuse le reste.
+// Une valeur inconnue n'est jamais ignorée en silence : l'ignorer rendrait l'avis plus favorable qu'il ne doit l'être.
+const plier = (v) => String(v ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+const DATA_ALIAS = {
+  aucune: ["aucune", "aucun", "none", "aucune donnee", "aucune donnee personnelle", "pas de donnees", "non"],
+  clients: ["clients", "client", "donnees clients", "donnees client", "personnelles", "donnees personnelles", "personal", "personal data", "customers", "customer data", "prospects", "utilisateurs", "usagers"],
+  rh: ["rh", "hr", "salaries", "salarie", "employes", "employees", "candidats", "candidat", "donnees rh", "ressources humaines", "collaborateurs"],
+  sante: ["sante", "donnees de sante", "medical", "medicales", "donnees medicales", "health", "health data", "patients"],
+  confidentiel: ["confidentiel", "confidentielles", "confidentiel entreprise", "confidential", "secret", "secret des affaires", "strategique", "donnees confidentielles"],
+  code: ["code", "code source", "source code", "logiciel"],
+};
+const CAT_ALIAS = {
+  chatbot: ["chatbot", "assistant", "assistant interne", "agent conversationnel"],
+  rh: ["rh", "hr", "recrutement", "ressources humaines", "recruiting", "recruitment"],
+  marketing: ["marketing", "contenus", "communication"],
+  support: ["support", "support client", "service client", "relation client", "customer support"],
+  documents: ["documents", "document", "analyse de documents", "analyse documentaire"],
+  code: ["code", "developpement", "development", "aide au developpement"],
+  autre: ["autre", "other", "autres"],
+};
+const resoudre = (alias, v) => { const k = plier(v); return Object.keys(alias).find((id) => alias[id].includes(k)) || null; };
+
 function cleanInput(b) {
   const s = (v, n) => String(v ?? "").replace(/\u0000/g, "").trim().slice(0, n);
+  const brut = Array.isArray(b.dataTypes) ? b.dataTypes : typeof b.dataTypes === "string" && b.dataTypes.trim() ? b.dataTypes.split(/[,;]/) : [];
+  const inconnues = brut.filter((d) => String(d ?? "").trim() && !resoudre(DATA_ALIAS, d));
+  if (inconnues.length) return { error: `Type de données non reconnu : ${inconnues.map((d) => `« ${String(d).slice(0, 40)} »`).join(", ")}. Valeurs acceptées : ${[...DATA].join(", ")}.` };
+  const cat = String(b.category ?? "").trim() ? resoudre(CAT_ALIAS, b.category) : "autre";
+  if (!cat) return { error: `Catégorie non reconnue : « ${String(b.category).slice(0, 40)} ». Valeurs acceptées : ${[...CATEGORIES].join(", ")}.` };
   const input = {
     tool: s(b.tool, 120), vendor: s(b.vendor, 120),
-    category: CATEGORIES.has(b.category) ? b.category : "autre",
+    category: cat,
     useCase: s(b.useCase, 2000),
-    dataTypes: Array.isArray(b.dataTypes) ? b.dataTypes.filter((d) => DATA.has(d)).slice(0, 6) : [],
+    dataTypes: [...new Set(brut.map((d) => resoudre(DATA_ALIAS, d)).filter(Boolean))].slice(0, 6),
     countries: s(b.countries, 200), users: Math.max(0, Math.min(10_000_000, Number(b.users) || 0)),
     contract: String(b.contract ?? "").replace(/\u0000/g, "").replace(/\r\n?/g, "\n").trim().slice(0, MAX_CONTRACT),
     source: s(b.source, 300),
@@ -350,11 +424,18 @@ const bearer = (request, env) => {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    if (url.protocol === "http:" && url.hostname !== "localhost" && url.hostname !== "127.0.0.1") { url.protocol = "https:"; return Response.redirect(url.toString(), 301); }
     if (url.pathname === "/mcp" || url.pathname === "/mcp/") {
       const registre = env.REGISTRE.get(env.REGISTRE.idFromName("principal"));
-      return handleMcp(request, { registre, env, base: url.origin, cleanInput, declencherGitHub });
+      const quota = async () => registre.quota(await empreinte(request, env));
+      return handleMcp(request, { registre, env, base: url.origin, cleanInput, declencherGitHub, quota });
     }
-    if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(request);
+    if (!url.pathname.startsWith("/api/")) {
+      if (url.pathname === "/" && request.method === "GET" && (request.headers.get("accept") || "").includes("text/html") && !/bot|crawl|spider|preview|headless/i.test(request.headers.get("user-agent") || "")) {
+        ctx.waitUntil(env.REGISTRE.get(env.REGISTRE.idFromName("principal")).visite().catch(() => {}));
+      }
+      return avecEntetes(await env.ASSETS.fetch(request));
+    }
     const registre = env.REGISTRE.get(env.REGISTRE.idFromName("principal"));
     const path = url.pathname.slice(4);
     const method = request.method;
@@ -378,6 +459,7 @@ export default {
         if (error) return err(error);
         const mode = b.mode === "claude" ? "claude" : "regles";
         if (mode === "claude" && input.contract.length < 200) return err("La lecture intégrale demande un contrat d'au moins quelques paragraphes.");
+        if (mode === "claude") { const q = await registre.quota(await empreinte(request, env)); if (!q.ok) return err(q.erreur, 429); }
         const d = await registre.creer(input, mode, !!env.ANTHROPIC_API_KEY);
         if (mode === "claude" && !env.ANTHROPIC_API_KEY) ctx.waitUntil(declencherGitHub(env, d.id));
         return ok({ ok: true, dossier: d });
@@ -407,6 +489,8 @@ export default {
       if ((m = path.match(/^\/conversations\/(CV-[0-9-]+)\/messages$/)) && method === "POST") {
         const b = await json(); if (!b) return err("Corps JSON attendu.");
         const text = String(b.text || "").replace(/\u0000/g, "").trim().slice(0, 6000);
+        if (!text && !(Array.isArray(b.pieces) && b.pieces.length)) return err("Message vide.");
+        { const q = await registre.quota(await empreinte(request, env)); if (!q.ok) return err(q.erreur, 429); }
         const pieces = (Array.isArray(b.pieces) ? b.pieces : []).slice(0, 6).map((p) => ({ nom: String(p.nom || "document").slice(0, 120), texte: String(p.texte || "").replace(/\u0000/g, "").replace(/\r\n?/g, "\n").trim() })).filter((p) => p.texte);
         const r = await registre.convMessage(m[1], text, pieces);
         if (r.error) return err(r.error, r.status);
@@ -418,6 +502,7 @@ export default {
       if (path.startsWith("/pont/")) {
         if (!bearer(request, env)) return err("Non autorisé.", 401);
         if (path === "/pont/suivant" && method === "GET") return ok({ ok: true, dossier: await registre.suivant() });
+        if (path === "/pont/stats" && method === "GET") return ok({ ok: true, ...(await registre.stats()) });
         if ((m = path.match(/^\/pont\/resultat\/([A-Z0-9-]+)$/)) && method === "POST") {
           const b = await json(); if (!b) return err("Corps JSON attendu.");
           if (m[1].startsWith("CV-")) {

@@ -18,13 +18,13 @@ const TOOLS = [
     description: "Ouvre un dossier d'autorisation Custodix AI pour un outil d'intelligence artificielle : outil, fournisseur, cas d'usage, données traitées et texte du contrat ou des conditions d'utilisation. Par défaut (lecture « assistant »), la réponse contient le guide de lecture : tu lis alors le contrat toi-même et tu renvoies le résultat avec deposer_lecture ; Custodix vérifie chaque citation dans le contrat puis calcule l'avis. Lecture « regles » : avis immédiat par les règles locales (motifs en français, sans lecture du texte). Lecture « custodix » : le lecteur de Custodix AI lit le contrat, consulte ensuite le dossier avec consulter_dossier.",
     inputSchema: {
       type: "object",
-      required: ["outil", "fournisseur", "cas_usage"],
+      required: ["outil", "fournisseur", "cas_usage", "donnees"],
       properties: {
         outil: { type: "string", description: "Nom de l'outil (ex. Fin AI Agent)" },
         fournisseur: { type: "string", description: "Éditeur de l'outil (ex. Intercom)" },
         categorie: { type: "string", enum: CATEGORIES, description: "chatbot (assistant interne), rh (recrutement, gestion des salariés), marketing (contenus), support (client), documents (analyse), code, autre" },
         cas_usage: { type: "string", description: "Ce que l'outil fera, pour qui, avec quelles données, en une à trois phrases" },
-        donnees: { type: "array", items: { type: "string", enum: DONNEES }, description: "Types de données traitées : aucune, clients, rh, sante, confidentiel, code" },
+        donnees: { type: "array", items: { type: "string", enum: DONNEES }, description: "Types de données traitées, obligatoire : aucune, clients, rh, sante, confidentiel, code. Toute autre valeur est refusée avec un message d'erreur." },
         pays: { type: "string", description: "Pays d'utilisation, séparés par des virgules" },
         utilisateurs: { type: "integer", minimum: 0, description: "Nombre d'utilisateurs estimé" },
         contrat: { type: "string", description: "Texte intégral du contrat, de l'accord de traitement ou des conditions d'utilisation, dans sa langue d'origine" },
@@ -105,11 +105,13 @@ async function callTool(name, args, ctx) {
       tool: args.outil, vendor: args.fournisseur, category: args.categorie || "autre", useCase: args.cas_usage,
       dataTypes: args.donnees || [], countries: args.pays || "", users: args.utilisateurs || 0, contract: args.contrat || "", source: "Connecteur MCP",
     };
+    if (!(Array.isArray(args.donnees) ? args.donnees.length : String(args.donnees ?? "").trim())) return fail("Précise les données traitées dans « donnees » : aucune, clients, rh, sante, confidentiel, code. Indique « aucune » seulement si l'outil ne traite aucune donnée personnelle ni confidentielle.");
     const { input: clean, error } = ctx.cleanInput(input);
     if (error) return fail(error);
     const lecture = ["assistant", "regles", "custodix"].includes(args.lecture) ? args.lecture : "assistant";
     if (lecture !== "regles" && clean.contract.length < 200) return fail("Le contrat manque ou est trop court : transmets le texte intégral dans « contrat », ou choisis lecture « regles ».");
     const mode = lecture === "regles" ? "regles" : lecture === "custodix" ? "claude" : "connecteur";
+    if (mode === "claude") { const q = await ctx.quota(); if (!q.ok) return fail(q.erreur); }
     const d = await registre.creer(clean, mode, !!env.ANTHROPIC_API_KEY);
     if (mode === "claude" && !env.ANTHROPIC_API_KEY) await ctx.declencherGitHub(env, d.id);
     if (mode === "regles") return text(avisTexte(d, base));

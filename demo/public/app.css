@@ -647,7 +647,11 @@ details.fold .fold__body { margin-top: 16px; }
   .file-pick .btn-secondary { width: auto; }
 }
 
+.logotype { white-space: nowrap; }
 @media (max-width: 420px) {
+  .site-header__inner { gap: 12px; }
+  .logotype { font-size: 21px; }
+  .site-header__nav { gap: 12px; font-size: 14px; }
   .meta-list { grid-template-columns: 1fr; }
   .home__shortcuts .btn-text { display: block; margin: 8px 0 0; }
 }
@@ -693,6 +697,13 @@ body.is-hero .site-header { border-bottom-color: rgba(255, 255, 255, 0.18); back
 body.is-hero .logotype { color: #fff; border-bottom-color: rgba(255, 255, 255, 0.7); }
 body.is-hero .site-header__nav a { color: rgba(255, 255, 255, 0.78); }
 body.is-hero .site-header__nav a:hover { color: #fff; }
+.site-footer__inner { display: flex; flex-wrap: wrap; gap: 8px 24px; justify-content: space-between; align-items: baseline; }
+.site-footer__nav { display: flex; gap: 18px; flex-wrap: wrap; }
+.site-footer__nav a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.legal { max-width: 720px; }
+.legal h2 { margin-top: 32px; }
+.legal p, .legal li { line-height: 1.6; }
+.legal ul { padding-left: 20px; }
 body.is-hero .site-footer { border-top-color: rgba(255, 255, 255, 0.14); color: rgba(255, 255, 255, 0.55); background: #0B1A30; }
 
 .hero {

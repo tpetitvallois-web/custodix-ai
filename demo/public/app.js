@@ -107,6 +107,9 @@ function route() {
   if (hash.startsWith("#/rapport")) return renderReport(id);
   if (hash.startsWith("#/registre")) return renderRegistre();
   if (hash.startsWith("#/connecteur")) return renderConnecteur();
+  if (hash.startsWith("#/conditions")) return renderLegal("conditions");
+  if (hash.startsWith("#/confidentialite")) return renderLegal("confidentialite");
+  if (hash !== "#/" && hash !== "#" && hash !== "") return renderIntrouvable();
   return renderHome();
 }
 
@@ -131,7 +134,7 @@ function renderHome() {
         <form class="ask" id="ask-form" novalidate>
           <label class="ask__attach" for="ask-file" title="Déposer un contrat (PDF, Word, texte)">${ICON_CLIP}<span class="sr-only">Déposer un document</span></label>
           <input type="file" id="ask-file" multiple accept=".pdf,.docx,.txt,.md,application/pdf,text/plain,text/markdown,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
-          <input type="text" class="ask__input" id="ask-input" placeholder="Décrivez l'outil, déposez son contrat, posez votre question." autocomplete="off">
+          <input type="text" class="ask__input" id="ask-input" aria-label="Votre message à l'assistant" placeholder="Décrivez l'outil, déposez son contrat, posez votre question." autocomplete="off">
           <button type="submit" class="ask__send" aria-label="Envoyer">${ICON_SEND}</button>
         </form>
         <div class="ask__pieces" id="ask-pieces"></div>
@@ -205,7 +208,7 @@ async function renderConversation(id) {
         <div class="composer__row">
           <label class="composer__attach" for="chat-file" title="Déposer un document">${ICON_CLIP}<span class="sr-only">Déposer un document</span></label>
           <input type="file" id="chat-file" multiple accept=".pdf,.docx,.txt,.md,application/pdf,text/plain,text/markdown,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
-          <textarea class="composer__input" id="chat-input" rows="1" placeholder="Répondez, posez une question, ou déposez un document."></textarea>
+          <textarea class="composer__input" id="chat-input" rows="1" aria-label="Votre message" placeholder="Répondez, posez une question, ou déposez un document."></textarea>
           <button type="submit" class="composer__send" id="chat-send" aria-label="Envoyer">${ICON_SEND}</button>
         </div>
       </form>
@@ -901,6 +904,67 @@ function bindValidation(d) {
 }
 
 // Écran 6 : connecter son assistant (serveur MCP).
+// Pages légales : conditions d'utilisation et données personnelles.
+const LEGAL = {
+  conditions: {
+    titre: "Conditions d'utilisation",
+    corps: `
+      <p>${BRAND} est une démonstration réalisée pour le concours Make AI Happen 2026. Le service est gratuit, sans compte et sans engagement.</p>
+      <h2 class="h-section">Ce que fait le service</h2>
+      <p>${BRAND} lit le contrat ou les conditions d'utilisation d'un outil d'intelligence artificielle, relève les clauses sur douze sujets et prépare un projet d'avis d'autorisation. Chaque citation est vérifiée mot pour mot dans le texte déposé. Le niveau de vigilance, les points bloquants et l'avis sont calculés par des règles fixes.</p>
+      <h2 class="h-section">Ce que le service ne fait pas</h2>
+      <p>L'avis préparé n'est pas une consultation juridique. Il ne vaut avis qu'une fois validé par un avocat. La lecture automatique peut omettre ou mal qualifier une clause. Vérifiez toujours le contrat avant de décider.</p>
+      <h2 class="h-section">Ce que vous déposez</h2>
+      <p>Les dossiers sont visibles dans le registre public de la démonstration. Ne déposez ni document confidentiel, ni donnée personnelle, ni contrat couvert par un accord de confidentialité. Utilisez des conditions publiées en ligne ou des documents anonymisés.</p>
+      <p>Vous restez responsable des documents que vous transmettez et devez avoir le droit de les partager.</p>
+      <h2 class="h-section">Usage raisonnable</h2>
+      <p>Le nombre de lectures est limité par adresse et par jour. Toute tentative de saturer le service ou de détourner l'assistant de sa mission peut entraîner le blocage de l'accès.</p>
+      <h2 class="h-section">Disponibilité</h2>
+      <p>Le service est fourni en l'état, sans garantie de disponibilité. Il peut être modifié ou arrêté à tout moment.</p>`,
+  },
+  confidentialite: {
+    titre: "Données personnelles",
+    corps: `
+      <p>${BRAND} traite le moins de données possible. Le site ne dépose aucun cookie, n'utilise aucun traceur publicitaire et ne charge aucune police ni aucun script chez un tiers, hormis les bibliothèques de lecture des PDF et des fichiers Word, chargées depuis cdnjs (Cloudflare) au moment où vous déposez un fichier.</p>
+      <h2 class="h-section">Données traitées</h2>
+      <ul>
+        <li>Le contenu des dossiers : nom de l'outil, fournisseur, cas d'usage, types de données, pays, nombre d'utilisateurs, texte du contrat.</li>
+        <li>Les messages et pièces jointes des conversations avec l'assistant.</li>
+        <li>Le nom et la fonction saisis lors de la validation d'un avis.</li>
+        <li>L'adresse IP, utilisée uniquement pour limiter le nombre de lectures et jamais conservée en clair : seule une empreinte chiffrée, qui change chaque jour, est gardée le temps du décompte.</li>
+      </ul>
+      <h2 class="h-section">Finalité et base légale</h2>
+      <p>Ces données servent à préparer l'avis demandé et à tenir le registre de la démonstration. La base légale est l'intérêt légitime à faire fonctionner le service que vous utilisez. Aucune donnée n'est vendue ni utilisée à des fins publicitaires.</p>
+      <h2 class="h-section">Destinataires et hébergement</h2>
+      <p>Le site et le registre sont hébergés par Cloudflare. La lecture des contrats est exécutée sur l'infrastructure de GitHub, par le modèle de langage d'un fournisseur tiers. Ne transmettez donc aucune donnée personnelle dans les contrats ou les messages. Ces prestataires peuvent traiter des données hors de l'Union européenne, dans le cadre des clauses contractuelles types de la Commission européenne.</p>
+      <h2 class="h-section">Durée de conservation</h2>
+      <p>Les dossiers et conversations sont conservés pendant la durée du concours Make AI Happen 2026, puis supprimés.</p>
+      <h2 class="h-section">Vos droits</h2>
+      <p>Vous disposez d'un droit d'accès, de rectification, d'effacement, d'opposition et de limitation. Pour l'exercer ou faire retirer un dossier, contactez l'équipe ${BRAND} sur la plateforme du concours Make AI Happen. Vous pouvez aussi saisir la CNIL (cnil.fr).</p>`,
+  },
+};
+
+function renderLegal(cle) {
+  const p = LEGAL[cle];
+  document.title = `${p.titre}, ${BRAND}`;
+  app.innerHTML = `
+    <section class="legal">
+      <div class="page-head"><h1 class="h-page">${p.titre}</h1></div>
+      ${p.corps}
+      <div class="btn-row"><a class="btn" href="#/">Revenir à l'accueil</a></div>
+    </section>`;
+  window.scrollTo(0, 0);
+}
+
+function renderIntrouvable() {
+  document.title = `Page introuvable, ${BRAND}`;
+  app.innerHTML = `
+    <section class="legal">
+      <div class="page-head"><h1 class="h-page">Page introuvable</h1><p class="muted">Cette adresse ne correspond à aucune page de ${BRAND}.</p></div>
+      <div class="btn-row"><a class="btn" href="#/">Revenir à l'accueil</a><a class="btn-text" href="#/registre">Voir le registre</a></div>
+    </section>`;
+}
+
 function renderConnecteur() {
   document.title = `Connecter votre assistant, ${BRAND}`;
   const url = `${location.origin}/mcp`;
