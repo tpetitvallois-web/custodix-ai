@@ -79,21 +79,17 @@ function mountMock(el, scnId, { flat = false } = {}) {
     } else note.textContent = t("pv.nocite");
   };
   el.querySelectorAll(".dimrow").forEach((b) => b.addEventListener("click", () => show(b.dataset.dim)));
-  el.querySelector("[data-amend]")?.addEventListener("click", () => {
-    const cur = el.querySelector('.dimrow[aria-pressed="true"]')?.dataset.dim;
-    openAmendment(s, r, new Set((dims.find((d) => d.id === cur)?.items || []).map((c) => c.sujet)));
-  });
+  el.querySelector("[data-amend]")?.addEventListener("click", () => openAmendment(s, r));
   requestAnimationFrame(() => show(first.id));
 }
 
-// Projet d'avenant calculé par le moteur sur le scénario : un article par clause à corriger.
-// L'article du domaine sélectionné est mis en avant.
-function openAmendment(s, r, focus) {
+// Projet d'avenant complet calculé par le moteur sur le scénario : un article par clause à corriger ou à ajouter.
+function openAmendment(s, r) {
   const text = avenant(r);
   const html = text.split("\n").map((l) => {
     if (/^AVENANT/.test(l)) return `<h3>${esc(l)}</h3>`;
     const m = l.match(/^Article \d+\. (.+)$/);
-    if (m) return `</section><section class="amd__art${focus.has(m[1]) ? " is-focus" : ""}"><h4>${esc(l)}</h4>`;
+    if (m) return `</section><section class="amd__art"><h4>${esc(l)}</h4>`;
     if (l === "Préambule") return `<h4>${esc(l)}</h4>`;
     return l ? `<p>${esc(l)}</p>` : "";
   }).join("");

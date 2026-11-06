@@ -673,7 +673,7 @@ p { margin: 0 0 12px; }
 .amd__body h3 { font-family: var(--sans); font-size: 16px; letter-spacing: 0; margin: 18px 0 8px; color: var(--ink); }
 .amd__body h4 { font-family: var(--sans); font-size: 14px; font-weight: 600; margin: 18px 0 4px; color: var(--ink); }
 .amd__body p { margin: 0 0 8px; }
-.amd__art.is-focus { background: var(--review-bg); border-left: 3px solid var(--blue); margin: 10px -14px; padding: 2px 14px 6px 11px; border-radius: 0 6px 6px 0; scroll-margin-top: 12px; }
+.amd__art { padding-top: 2px; border-top: 1px solid var(--line); margin-top: 14px; }
 .amd__foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 20px; border-top: 1px solid var(--line); }
 .amd__foot > span { max-width: 380px; }
 @media (max-width: 600px) { .amd__body { padding: 4px 18px 18px; } }
