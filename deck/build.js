@@ -50,7 +50,7 @@ function makeDeck(fileName, slides, title, sections) {
     if (note) T(s, note, { x: M, y: 6.62, w: CW - 1.5, h: 0.28, fontSize: 8.5, color: MUTED });
     rule(s, M, 6.98, CW, LINE, 0.75);
     T(s, BRAND, { x: M, y: 7.08, w: 1.6, h: 0.3, fontFace: SERIF, fontSize: 13, color: INK });
-    T(s, "Projet étudiant, Make AI Happen 2026, KPMG, thématique 3. Contrats, fournisseurs et dossiers fictifs. Céline Lin et Tom Petit Vallois.", { x: M + 1.7, y: 7.13, w: 7.6, h: 0.25, fontSize: 6.5, color: GREY });
+    T(s, "Projet étudiant, Make AI Happen 2026, KPMG, thématique 3. Démonstration en ligne, testée sur 34 contrats réels d'outils IA. Céline Lin et Tom Petit Vallois.", { x: M + 1.7, y: 7.13, w: 7.6, h: 0.25, fontSize: 6.5, color: GREY });
     if (n) {
       T(s, "Avis d'autorisation des outils d'IA", { x: W - M - 3.0, y: 7.13, w: 2.3, h: 0.25, fontSize: 6.5, color: GREY, align: "right" });
       s.addShape(pres.ShapeType.line, { x: W - M - 0.58, y: 7.08, w: 0, h: 0.3, line: { color: LINE, width: 0.75 } });
@@ -178,8 +178,11 @@ const CAP = {
   valide: "Le même dossier une fois validé par l'avocat, avec l'identifiant de signature.",
   risques: "Chaque risque cite la clause du contrat et l'article applicable.",
   avenant: "L'avenant type généré à partir des clauses correctives, prêt à négocier.",
-  accueil: "La démonstration en ligne, trois dossiers prêts à l'examen.",
+  accueil: "L'accueil : on décrit l'outil, on dépose son contrat, l'assistant ne demande que ce qui manque.",
+  conversation: "La conversation : le dossier est déduit du contrat, l'avis arrive dans l'échange, le dossier est au registre.",
+  connecteur: "Le connecteur : chacun branche son propre assistant, les citations sont vérifiées par Custodix.",
 };
+const ENTREES = "Trois entrées : la conversation, le formulaire, ou son propre assistant par connecteur. Le contrat est lu en entier dans sa langue, chaque citation vérifiée mot pour mot ; barème, points bloquants et avis sont calculés par le cabinet. Testé sur 34 contrats réels : OpenAI, Mistral, Intercom, HubSpot, HireVue.";
 const examplesTable = (c, s, x, y, w, size = 11) => c.table(s, x, y, w, [w * 0.17, w * 0.52, w * 0.31], ["Outil", "Usage et données", "Avis"], EXAMPLES.map(([col, n, u, d, a]) => [n, `${u} (${d})`, [DOT(col), { text: a }]]), { size });
 
 // ───────────────────────── Slides
@@ -295,15 +298,15 @@ const demoSlide = ({ add, H2, shot, button, P, foot }, n) => {
   const s = add();
   H2(s, "La démonstration en ligne : du dossier déposé à l'avenant type.", "Démonstration", "Démonstration");
   const g = 0.5, w = (CW - 2 * g) / 3, h = w / RATIO, y1 = TOP, y2 = TOP + h + 0.5;
-  shot(s, "shots/formulaire.png", M, y1, w, CAP.formulaire);
+  shot(s, "shots/conversation.png", M, y1, w, CAP.conversation);
   shot(s, "shots/examen.png", M + w + g, y1, w, CAP.examen);
   shot(s, "shots/risques.png", M + 2 * (w + g), y1, w, CAP.risques);
   shot(s, "shots/avenant.png", M, y2, w, CAP.avenant);
   shot(s, "shots/validation.png", M + w + g, y2, w, CAP.valide);
   button(s, M + 2 * (w + g), y2 + 0.1, w);
-  P(s, "Trois dossiers prêts à l'examen, sans connexion ni compte. Les contrats et les fournisseurs sont fictifs ; les règles appliquées sont celles du RGPD et de l'AI Act.", M + 2 * (w + g), y2 + 1.05, w, 1.0, { fontSize: 11 });
+  P(s, ENTREES, M + 2 * (w + g), y2 + 0.95, w, 1.3, { fontSize: 10 });
   foot(s, "", n);
-  s.addNotes("Le parcours complet en cinq captures : dossier, examen, risques, avenant, validation. Le bouton ouvre la démonstration.");
+  s.addNotes("Le parcours en cinq captures : conversation, examen, risques, avenant, validation. Le bouton ouvre la démonstration.");
 };
 
 // Annexes
@@ -374,16 +377,16 @@ const demoAgorize = (c, n) => {
   const s = add();
   H2(s, "Trois exemples, une même logique de décision.", "Démonstration", "Démonstration");
   const g = 0.3, w = 3.3, x0 = M + (CW - 3 * w - 2 * g) / 2, h = w / RATIO;
-  shot(s, "shots/formulaire.png", x0, TOP, w, CAP.formulaire);
+  shot(s, "shots/conversation.png", x0, TOP, w, CAP.conversation);
   shot(s, "shots/examen.png", x0 + w + g, TOP, w, CAP.examen);
   shot(s, "shots/validation.png", x0 + 2 * (w + g), TOP, w, CAP.valide);
   const y2 = TOP + h + 0.6, lw = 6.9, rx = M + lw + 0.4, rw = CW - lw - 0.4;
   examplesTable(c, s, M, y2, lw, 10);
   callout(s, M, 5.8, lw, 0.65, VISION, 12);
   button(s, rx, y2 + 0.05, rw, { key: "agorize5" });
-  P(s, "Trois dossiers prêts à l'examen, sans connexion ni compte. " + PILOT, rx, y2 + 0.95, rw, 1.2, { fontSize: 10.5 });
+  P(s, ENTREES + " " + PILOT, rx, y2 + 0.95, rw, 1.4, { fontSize: 9.5 });
   foot(s, "", n);
-  s.addNotes("Trois captures du parcours, les trois exemples en tableau, la vision, et le bouton vers la démonstration.");
+  s.addNotes("Conversation, examen, validation en captures, les trois exemples en tableau, la vision, et le bouton vers la démonstration.");
 };
 const solutionAgorize = ({ add, H2, COL, shot, table, callout, issue, foot }, n) => {
   const s = add();

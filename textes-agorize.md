@@ -22,7 +22,7 @@ Custodix AI ne remplace pas la gestion contractuelle ni l'avocat. Les plateforme
 
 Le modèle de service est progressif : diagnostic initial du parc d'outils IA, autorisation continue des nouveaux outils, accompagnement contractuel (avenants) et suivi de gouvernance (registre, revue périodique, reporting). Un pilote de trois mois avec deux grands comptes permet de valider le barème, les modalités et la tarification avec KPMG Avocats.
 
-Une démonstration en ligne examine trois outils fictifs de bout en bout : un générateur de contenus marketing (autorisé), un chatbot de support client (autorisé sous conditions), un outil de tri de CV (non autorisé en l'état).
+Une démonstration en ligne examine n'importe quel contrat d'outil IA, en conversation, par formulaire ou depuis son propre assistant : le contrat est lu en entier dans sa langue, chaque citation vérifiée, l'avis calculé par le barème du cabinet. Trois exemples sont prêts : un générateur de contenus marketing (autorisé), un chatbot de support client (autorisé sous conditions), un outil de tri de CV (non autorisé en l'état). Testée sur 34 contrats réels.
 
 ## Avant le dépôt (6 novembre 2026, viser avant midi)
 
