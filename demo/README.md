@@ -1,8 +1,16 @@
-# Custodix AI, le service
+# Aucteva (anciennement Custodix AI), le service
 
-Custodix AI examine le contrat ou les conditions d'utilisation d'un outil d'IA, le croise avec le cas d'usage et les données traitées, et prépare un dossier d'autorisation : avis (autorisé, sous conditions, non autorisé en l'état), niveau de vigilance sur 100, obligations, mesures, avenant type. L'avis est ensuite validé par un avocat et inscrit au registre.
+Aucteva transforme le contrat d'un fournisseur d'IA et le cas d'usage prévu en un dossier d'analyse documenté : huit domaines de vigilance (regroupant douze sujets), chaque observation reliée à une citation vérifiée dans le texte, proposition d'avis et niveau de vigilance sur 100, conditions, avenant type. Trois temps distincts et tracés : avis préparé par l'IA, avis validé par l'avocat, décision d'utilisation par une personne habilitée. Le tout alimente un registre de gouvernance.
 
-En ligne : https://custodix-ai.gererseul-avis-worker.workers.dev (compte Cloudflare perso de Tom).
+En ligne : https://custodix-ai.gererseul-avis-worker.workers.dev (compte Cloudflare perso de Tom). L'adresse garde l'ancien nom : renommer le Worker changerait l'adresse et repartirait d'un registre vide.
+
+## Interface (public/, modules ES sans build)
+
+- `app.js` routeur. Site public : `#/` (accueil, ancres `#/produit`, `#/fonctionnement`, `#/cas-usage`, `#/securite`), `#/demo`, `#/conditions`, `#/confidentialite`. Application : `#/app` (vue d'ensemble), `#/app/outils`, `#/app/nouveau` (parcours guidé) et `#/app/nouveau/conversation`, `#/app/dossiers`, `#/app/validation`, `#/app/registre`, `#/app/parametres`, `#/app/connecteur`, `#/app/en-cours/ID`, `#/app/conversation/ID`, `#/app/dossier/ID[/synthese|/decision]`. Les anciennes adresses (`#/analyse`, `#/rapport/ID`, `#/registre`...) sont redirigées.
+- `i18n.js` toutes les chaînes de l'interface, français et anglais. Le contenu des analyses reste en français.
+- `ui.js` accès API, formatage, icônes, statuts ; `doc.js` localisation des citations dans le texte (repli casse, apostrophes, espaces), sections, rendu numéroté ; `site.js` site public ; `shell.js` coque et listes ; `assess.js` parcours guidé, suivi d'analyse, conversation ; `dossier.js` espace d'analyse à deux panneaux, synthèse imprimable, validation et décision.
+- `engine.js` expose `DIMENSIONS` (les huit domaines) et `constats` dans le résultat (un constat complet par sujet, citation entière). Les dossiers antérieurs sont reconstitués depuis `clauses_critiques`.
+- API ajoutées : `GET /api/examens/ID/contrat` (texte source), `POST /api/examens/ID/decision` (nom, fonction, décision, motif ; exige la validation juridique). Champs de dossier ajoutés : département, usage interne ou externe, responsable, informations complémentaires, documents (nom, format, taille, mots).
 
 ## Trois façons d'entrer
 

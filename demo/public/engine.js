@@ -1,13 +1,14 @@
-// Moteur d'analyse Custodix AI, version de démonstration : règles déterministes, sans appel réseau.
+// Moteur d'analyse Aucteva, version de démonstration : règles déterministes, sans appel réseau.
 // Il examine le contrat, repère les clauses critiques, croise avec le cas d'usage et les données, qualifie le risque sur 100 (niveau de vigilance)
 // La même structure de sortie (voir contenu/schema-decision.json) est prévue pour une version
 // où la lecture du contrat est confiée à Claude : seul le module « extraction » change.
 
-export const BRAND = "Custodix AI";
+export const BRAND = "Aucteva";
 export const MENTION = `Avis préparé par ${BRAND}. Validation par un avocat requise avant tout déploiement.`;
 
 const norm = (t) => (t || "").replace(/’/g, "'").replace(/\s+/g, " ");
-const sentences = (t) => norm(t).split(/(?<=[.;])\s+(?=[A-ZÀ-Ý«"])|\n+/).map((x) => x.trim()).filter(Boolean);
+// Les retours à la ligne séparent les phrases : un intertitre ne se colle pas à la phrase qui le suit.
+const sentences = (t) => (t || "").split(/\n+/).flatMap((line) => norm(line).split(/(?<=[.;])\s+(?=[A-ZÀ-Ý«"])/)).map((x) => x.trim()).filter(Boolean);
 
 // Chaque sujet : les motifs qui rendent une clause protectrice, ambiguë ou dangereuse.
 // « applies » dit quand l'absence de clause compte comme un manque.
@@ -280,6 +281,7 @@ export function analyse(input, options = {}) {
     clauses_critiques: critical.filter((c) => c.status !== "protectrice").map((c) => ({ sujet: c.label, statut: c.status, extrait: short(c.quote, 320), base: c.legal, note: c.note || null })),
     clauses_protectrices: critical.filter((c) => c.status === "protectrice").map((c) => ({ sujet: c.label, extrait: short(c.quote, 260), note: c.note || null })),
     clauses_manquantes: missing.map(({ sujet, base }) => ({ sujet, base })),
+    constats: findings.map((f) => { const t = TOPICS.find((x) => x.id === f.topic); return { topic: f.topic, sujet: f.label, statut: f.status, citation: f.quote || null, note: f.note || null, base: f.legal, pertinent: t.applies(ctx) }; }),
     obligations, conditions, actions,
     clauses_correctives: dedupe(fixes),
     points_bloquants: blockers,
@@ -321,6 +323,19 @@ const rank = (g) => ({ "élevée": 3, moyenne: 2, faible: 1 })[g] || 0;
 const short = (s, n = 180) => { s = norm(s || ""); return s.length > n ? s.slice(0, n - 1).replace(/\s\S*$/, "") + "…" : s; };
 const dedupe = (arr) => { const seen = new Set(); return arr.filter((x) => (seen.has(x.sujet) ? false : (seen.add(x.sujet), true))); };
 const fr = (iso) => { const [y, m, d] = (iso || "").split("-"); return `${Number(d)} ${["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"][Number(m) - 1]} ${y}`; };
+
+// Les huit domaines de vigilance présentés à l'utilisateur. Chacun regroupe un ou plusieurs des douze sujets lus dans le contrat.
+// Ce sont des catégories d'examen, pas une certification de conformité.
+export const DIMENSIONS = [
+  { id: "training", topics: ["training"] },
+  { id: "retention", topics: ["retention"] },
+  { id: "transfer", topics: ["transfer"] },
+  { id: "subprocessors", topics: ["subprocessors"] },
+  { id: "security", topics: ["security", "breach", "audit"] },
+  { id: "liability", topics: ["liability", "outputs", "changes"] },
+  { id: "oversight", topics: ["automated"] },
+  { id: "transparency", topics: ["transparency"] },
+];
 
 // Étapes affichées pendant l'analyse, avec le détail calculé pour chacune.
 export const STEPS = ["Examen du contrat", "Extraction des clauses critiques", "Analyse du cas d'usage", "Croisement avec le RGPD et l'AI Act", "Qualification du risque", "Préparation de l'avis"];

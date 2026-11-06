@@ -1,4 +1,4 @@
-// Worker Cloudflare de Custodix AI : sert la page, tient le registre des dossiers (Durable Object)
+// Worker Cloudflare de Aucteva : sert la page, tient le registre des dossiers (Durable Object)
 // et fait lire les contrats par Claude, soit par l'API (secret ANTHROPIC_API_KEY), soit par le pont local (claude -p).
 import { DurableObject } from "cloudflare:workers";
 import Anthropic from "@anthropic-ai/sdk";
@@ -87,13 +87,37 @@ export class Registre extends DurableObject {
     return this.public(d);
   }
 
-  async liste(limit = 200) {
+  // Décision d'utilisation : prise par une personne habilitée de l'entreprise, après la validation juridique.
+  async decider(id, x) {
+    const d = await this.ctx.storage.get(`dossier:${id}`);
+    if (!d || d.statut !== "termine") return { erreur: "Dossier inconnu ou examen non terminé.", status: 404 };
+    if (!d.validation) return { erreur: "La décision suit la validation juridique : faites d'abord valider l'avis.", status: 409 };
+    const now = new Date();
+    const payload = `${id}|${x.nom}|${x.fonction}|${x.decision}|${now.toISOString()}|${d.validation.hash}`;
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(payload));
+    const hash = [...new Uint8Array(buf)].slice(0, 6).map((b) => b.toString(16).padStart(2, "0")).join("").toUpperCase();
+    d.decision = { ...x, iso: now.toISOString(), hash };
+    d.maj = Date.now();
+    await this.ctx.storage.put(`dossier:${id}`, d);
+    return { dossier: this.public(d) };
+  }
+
+  async contrat(id) {
+    const d = await this.ctx.storage.get(`dossier:${id}`);
+    return d ? await this._contract(d) : null;
+  }
+
+  async liste(limit = 300) {
     const m = await this.ctx.storage.list({ prefix: "dossier:", reverse: true, limit });
     return [...m.values()].map((d) => ({
       id: d.id, statut: d.statut, mode: d.mode, cree: d.cree,
       outil: d.input.tool, fournisseur: d.input.vendor, categorie: d.input.category,
+      cas_usage: (d.input.useCase || "").slice(0, 220), departement: d.input.departement || null, responsable: d.input.responsable || null, usage: d.input.usage || null,
+      documents: (d.input.documents || []).map((x) => x.nom).slice(0, 6), source: (d.input.source || "").slice(0, 120), mots: d.input.contrat_mots || 0,
       verdict: d.resultat?.verdict || null, score: d.resultat?.score ?? null, moteur: neutre(d.resultat?.meta?.moteur) || null,
+      conditions: d.resultat?.conditions?.length || 0, bloquants: d.resultat?.points_bloquants?.length || 0, maj: d.maj || d.cree,
       validation: d.validation ? { nom: d.validation.nom, role: d.validation.role, iso: d.validation.iso } : null,
+      decision: d.decision ? { nom: d.decision.nom, fonction: d.decision.fonction, decision: d.decision.decision, iso: d.decision.iso } : null,
     }));
   }
 
@@ -290,7 +314,7 @@ export class Registre extends DurableObject {
     const { contract, ...meta } = input;
     if (typeof contract === "string") meta.contrat_mots = contract.trim().split(/\s+/).filter(Boolean).length;
     if (rest.resultat && rest.resultat.meta) rest.resultat = { ...rest.resultat, meta: { ...rest.resultat.meta, moteur: neutre(rest.resultat.meta.moteur) } };
-    return { ...rest, input: meta, validation: d.validation ? { ...d.validation, when: fmtDateTime(d.validation.iso) } : null };
+    return { ...rest, input: meta, validation: d.validation ? { ...d.validation, when: fmtDateTime(d.validation.iso) } : null, decision: d.decision ? { ...d.decision, when: fmtDateTime(d.decision.iso) } : null };
   }
 }
 
@@ -359,6 +383,9 @@ function cleanInput(b) {
     countries: s(b.countries, 200), users: Math.max(0, Math.min(10_000_000, Number(b.users) || 0)),
     contract: String(b.contract ?? "").replace(/\u0000/g, "").replace(/\r\n?/g, "\n").trim().slice(0, MAX_CONTRACT),
     source: s(b.source, 300),
+    departement: s(b.departement, 80), responsable: s(b.responsable, 80), complement: s(b.complement, 1500),
+    usage: b.usage === "externe" ? "externe" : b.usage === "interne" ? "interne" : "",
+    documents: (Array.isArray(b.documents) ? b.documents : []).slice(0, 10).map((x) => ({ nom: s(x?.nom, 120), format: s(x?.format, 12), taille: Math.max(0, Number(x?.taille) || 0), mots: Math.max(0, Number(x?.mots) || 0) })).filter((x) => x.nom),
   };
   if (!input.tool || !input.vendor || !input.useCase) return { error: "Renseignez le nom de l'outil, le fournisseur et le cas d'usage." };
   return { input };
@@ -390,7 +417,7 @@ async function extraction(body) {
   if (u.protocol !== "https:" && u.protocol !== "http:") return err("Seules les adresses http(s) sont acceptées.");
   if (/^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|\[?::1)/.test(u.hostname)) return err("Adresse refusée.");
   let r;
-  try { r = await fetch(u.toString(), { headers: { "user-agent": "Mozilla/5.0 (compatible; CustodixAI/1.0; +https://custodix-ai.gererseul-avis-worker.workers.dev)", accept: "text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.5" }, redirect: "follow", cf: { cacheTtl: 0 } }); }
+  try { r = await fetch(u.toString(), { headers: { "user-agent": "Mozilla/5.0 (compatible; Aucteva/1.0; +https://custodix-ai.gererseul-avis-worker.workers.dev)", accept: "text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.5" }, redirect: "follow", cf: { cacheTtl: 0 } }); }
   catch (e) { return err("La page n'a pas pu être récupérée : " + (e.message || e)); }
   if (!r.ok) return err(`La page répond ${r.status}. Si le site bloque les robots, copiez le texte ou déposez le PDF.`);
   const type = (r.headers.get("content-type") || "").toLowerCase();
@@ -473,10 +500,23 @@ export default {
       if ((m = path.match(/^\/examens\/([A-Z0-9-]+)\/validation$/)) && method === "POST") {
         const b = await json(); if (!b) return err("Corps JSON attendu.");
         const nom = String(b.nom || "").trim().slice(0, 80);
-        const role = ["Avocat", "DPO", "Expert conformité", "Expert IA"].includes(b.role) ? b.role : "Avocat";
+        const role = ["Avocat", "Avocat associé", "DPO", "Expert conformité", "Expert IA"].includes(b.role) ? b.role : "Avocat";
         if (!nom) return err("Le nom est requis.");
         const d = await registre.valider(m[1], nom, role);
         return d ? ok({ ok: true, dossier: d }) : err("Dossier inconnu ou examen non terminé.", 404);
+      }
+      if ((m = path.match(/^\/examens\/([A-Z0-9-]+)\/contrat$/)) && method === "GET") {
+        const t = await registre.contrat(m[1]);
+        return t === null ? err("Dossier inconnu.", 404) : ok({ ok: true, texte: t });
+      }
+      if ((m = path.match(/^\/examens\/([A-Z0-9-]+)\/decision$/)) && method === "POST") {
+        const b = await json(); if (!b) return err("Corps JSON attendu.");
+        const nom = String(b.nom || "").trim().slice(0, 80), fonction = String(b.fonction || "").trim().slice(0, 80);
+        const decision = ["autorise", "autorise_conditions", "refuse"].includes(b.decision) ? b.decision : null;
+        if (!nom || !fonction) return err("Le nom et la fonction de la personne habilitée sont requis.");
+        if (!decision) return err("Choisissez une décision : autorisé, autorisé sous conditions ou refusé.");
+        const r = await registre.decider(m[1], { nom, fonction, decision, motif: String(b.motif || "").trim().slice(0, 1000) });
+        return r.erreur ? err(r.erreur, r.status) : ok({ ok: true, dossier: r.dossier });
       }
       if (path === "/registre" && method === "GET") return ok({ ok: true, dossiers: await registre.liste() });
 

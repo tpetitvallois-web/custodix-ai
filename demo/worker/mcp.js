@@ -1,7 +1,7 @@
-// Serveur MCP de Custodix AI (transport Streamable HTTP, sans état, sans authentification pour la démonstration).
+// Serveur MCP de Aucteva (transport Streamable HTTP, sans état, sans authentification pour la démonstration).
 // Toute personne peut brancher son assistant (Claude, ChatGPT ou autre client MCP) sur https://<site>/mcp et lui
 // demander d'examiner un outil IA. Trois façons de lire le contrat : l'assistant lit lui-même (ses citations sont
-// vérifiées mot pour mot par Custodix), les règles locales, ou le lecteur de Custodix AI.
+// vérifiées mot pour mot par Aucteva), les règles locales, ou le lecteur de Aucteva.
 // Le barème, les points bloquants, les obligations et l'avis restent calculés par le code du cabinet.
 
 import { TOPICS } from "../public/engine.js";
@@ -15,7 +15,7 @@ const DONNEES = ["aucune", "clients", "rh", "sante", "confidentiel", "code"];
 const TOOLS = [
   {
     name: "examiner_outil",
-    description: "Ouvre un dossier d'autorisation Custodix AI pour un outil d'intelligence artificielle : outil, fournisseur, cas d'usage, données traitées et texte du contrat ou des conditions d'utilisation. Par défaut (lecture « assistant »), la réponse contient le guide de lecture : tu lis alors le contrat toi-même et tu renvoies le résultat avec deposer_lecture ; Custodix vérifie chaque citation dans le contrat puis calcule l'avis. Lecture « regles » : avis immédiat par les règles locales (motifs en français, sans lecture du texte). Lecture « custodix » : le lecteur de Custodix AI lit le contrat, consulte ensuite le dossier avec consulter_dossier.",
+    description: "Ouvre un dossier d'autorisation Aucteva pour un outil d'intelligence artificielle : outil, fournisseur, cas d'usage, données traitées et texte du contrat ou des conditions d'utilisation. Par défaut (lecture « assistant »), la réponse contient le guide de lecture : tu lis alors le contrat toi-même et tu renvoies le résultat avec deposer_lecture ; Aucteva vérifie chaque citation dans le contrat puis calcule l'avis. Lecture « regles » : avis immédiat par les règles locales (motifs en français, sans lecture du texte). Lecture « custodix » : le lecteur de Aucteva lit le contrat, consulte ensuite le dossier avec consulter_dossier.",
     inputSchema: {
       type: "object",
       required: ["outil", "fournisseur", "cas_usage", "donnees"],
@@ -34,7 +34,7 @@ const TOOLS = [
   },
   {
     name: "deposer_lecture",
-    description: "Renvoie ta lecture d'un contrat ouvert avec examiner_outil (lecture « assistant ») : pour chacun des douze sujets, un statut (protectrice, ambiguë, dangereuse, absent), la citation exacte du contrat dans sa langue et une note en français, plus des observations. Custodix vérifie chaque citation mot pour mot dans le contrat, ramène à « absent » toute citation introuvable, puis calcule le niveau de vigilance et l'avis. La réponse contient l'avis complet et l'adresse du dossier.",
+    description: "Renvoie ta lecture d'un contrat ouvert avec examiner_outil (lecture « assistant ») : pour chacun des douze sujets, un statut (protectrice, ambiguë, dangereuse, absent), la citation exacte du contrat dans sa langue et une note en français, plus des observations. Aucteva vérifie chaque citation mot pour mot dans le contrat, ramène à « absent » toute citation introuvable, puis calcule le niveau de vigilance et l'avis. La réponse contient l'avis complet et l'adresse du dossier.",
     inputSchema: {
       type: "object",
       required: ["id", "clauses"],
@@ -62,12 +62,12 @@ const TOOLS = [
   },
   {
     name: "consulter_dossier",
-    description: "Lit un dossier d'autorisation Custodix AI par son identifiant : statut, avis, niveau de vigilance, points bloquants, risques, conditions, mesures, clauses correctives, validation par un avocat.",
+    description: "Lit un dossier d'autorisation Aucteva par son identifiant : statut, avis, niveau de vigilance, points bloquants, risques, conditions, mesures, clauses correctives, validation par un avocat.",
     inputSchema: { type: "object", required: ["id"], properties: { id: { type: "string" } } },
   },
   {
     name: "registre",
-    description: "Liste les derniers dossiers du registre des autorisations Custodix AI : identifiant, date, outil, fournisseur, avis, niveau, validation.",
+    description: "Liste les derniers dossiers du registre des autorisations Aucteva : identifiant, date, outil, fournisseur, avis, niveau, validation.",
     inputSchema: { type: "object", properties: { limite: { type: "integer", minimum: 1, maximum: 100 } } },
   },
 ];
@@ -115,7 +115,7 @@ async function callTool(name, args, ctx) {
     const d = await registre.creer(clean, mode, !!env.ANTHROPIC_API_KEY);
     if (mode === "claude" && !env.ANTHROPIC_API_KEY) await ctx.declencherGitHub(env, d.id);
     if (mode === "regles") return text(avisTexte(d, base));
-    if (mode === "claude") return text(`Dossier ${d.id} ouvert. Le lecteur de Custodix AI lit le contrat (${clean.contract.split(/\s+/).length} mots), compte une à trois minutes. Consulte ensuite le dossier avec consulter_dossier, id ${d.id}. Page : ${base}/#/rapport/${d.id}`);
+    if (mode === "claude") return text(`Dossier ${d.id} ouvert. Le lecteur de Aucteva lit le contrat (${clean.contract.split(/\s+/).length} mots), compte une à trois minutes. Consulte ensuite le dossier avec consulter_dossier, id ${d.id}. Page : ${base}/#/rapport/${d.id}`);
     return text([
       `Dossier ${d.id} ouvert pour ${clean.tool} (${clean.vendor}). Lis maintenant le contrat que tu as transmis, puis appelle deposer_lecture avec l'id ${d.id}.`,
       "", "Consigne de lecture :", SYSTEM, "", "Sujets à qualifier :", sujetsTexte(),
@@ -155,13 +155,13 @@ async function rpc(msg, ctx) {
   if (id === undefined || id === null) return null; // notification : rien à renvoyer
   switch (method) {
     case "initialize":
-      return reply({ protocolVersion: PROTOCOL, capabilities: { tools: {} }, serverInfo: { name: "custodix-ai", title: "Custodix AI", version: "1.0.0" }, instructions: "Custodix AI prépare un avis d'autorisation pour un outil d'intelligence artificielle à partir de son contrat et du cas d'usage. Commence par examiner_outil avec le texte intégral du contrat ; si la réponse contient un guide de lecture, lis le contrat et renvoie ta lecture avec deposer_lecture. L'avis doit toujours être validé par un avocat." });
+      return reply({ protocolVersion: PROTOCOL, capabilities: { tools: {} }, serverInfo: { name: "aucteva", title: "Aucteva", version: "1.0.0" }, instructions: "Aucteva prépare un avis d'autorisation pour un outil d'intelligence artificielle à partir de son contrat et du cas d'usage. Commence par examiner_outil avec le texte intégral du contrat ; si la réponse contient un guide de lecture, lis le contrat et renvoie ta lecture avec deposer_lecture. L'avis doit toujours être validé par un avocat." });
     case "ping": return reply({});
     case "tools/list": return reply({ tools: TOOLS });
     case "tools/call": {
       const p = params || {};
       try { return reply(await callTool(p.name, p.arguments, ctx)); }
-      catch (e) { console.error("mcp tool", p.name, e); return reply(fail("Erreur interne de Custodix AI.")); }
+      catch (e) { console.error("mcp tool", p.name, e); return reply(fail("Erreur interne de Aucteva.")); }
     }
     default: return error(-32601, `Méthode inconnue : ${method}`);
   }
@@ -170,7 +170,7 @@ async function rpc(msg, ctx) {
 export async function handleMcp(request, ctx) {
   const cors = { "access-control-allow-origin": "*", "access-control-allow-methods": "POST, GET, OPTIONS", "access-control-allow-headers": "content-type, mcp-session-id, mcp-protocol-version, authorization", "access-control-expose-headers": "mcp-session-id" };
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
-  if (request.method === "GET") return new Response("Serveur MCP de Custodix AI. Transport Streamable HTTP sans état : envoyez vos requêtes JSON-RPC en POST.", { status: 405, headers: { ...cors, "content-type": "text/plain; charset=utf-8", allow: "POST, OPTIONS" } });
+  if (request.method === "GET") return new Response("Serveur MCP de Aucteva. Transport Streamable HTTP sans état : envoyez vos requêtes JSON-RPC en POST.", { status: 405, headers: { ...cors, "content-type": "text/plain; charset=utf-8", allow: "POST, OPTIONS" } });
   if (request.method !== "POST") return new Response(null, { status: 405, headers: cors });
   let body;
   try { body = await request.json(); } catch { return Response.json({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "JSON illisible" } }, { status: 400, headers: cors }); }
