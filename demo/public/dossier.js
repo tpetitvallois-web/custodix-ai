@@ -2,7 +2,7 @@
 import { t, getLang } from "./i18n.js";
 import { api, esc, fmtInt, fmtDay, ICON, avisPill, decisionPill, stagePill, dimensionsOf, constatsOf, statusKey, CLAUSE, clausePill, copy, toast, session, slug, go } from "./ui.js";
 import { shellLayout, invalidate } from "./shell.js";
-import { avenant, MENTION, TOPICS } from "./engine.js";
+import { avenant, amendmentClauses, MENTION, TOPICS } from "./engine.js";
 import { fold, locate, renderDoc, sectionOf, scrollWithin } from "./doc.js";
 
 const L = (fr, en) => (getLang() === "en" ? en : fr);
@@ -244,7 +244,7 @@ function paintSummary(body, d) {
       <h2>Mesures recommandées</h2>
       <ol>${r.actions.map((a) => `<li>${esc(a)}</li>`).join("")}</ol>
 
-      ${r.clauses_correctives.length ? `<h2>Avenant type</h2>
+      ${amendmentClauses(r).length ? `<h2>Avenant type</h2>
       <p class="small muted no-print">Document de travail généré à partir des clauses correctives. À relire et à négocier par un avocat.</p>
       <div class="no-print" style="display:flex;gap:8px;margin-bottom:10px"><button type="button" class="btn btn--secondary btn--sm" id="av-show">${t("ws.amendment")}</button><button type="button" class="btn btn--secondary btn--sm" id="av-copy">${t("common.copy")}</button><button type="button" class="btn btn--secondary btn--sm" id="av-dl">${t("common.download")} .txt</button></div>
       <pre class="amend" id="av" hidden>${esc(avenant(r))}</pre>` : ""}

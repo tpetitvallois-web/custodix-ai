@@ -303,8 +303,12 @@ function summarize(ctx, verdict, score, critical, blockers, missing) {
   return [s1, s2, s3];
 }
 
+// Articles de l'avenant : chaque clause ambiguë ou dangereuse à corriger, puis chaque clause manquante à ajouter.
+export const amendmentClauses = (result) => dedupe([...(result.clauses_correctives || []), ...(result.clauses_manquantes || []).map((c) => ({ sujet: c.sujet, texte: c.texte || TOPICS.find((t) => t.label === c.sujet)?.fix })).filter((c) => c.texte)]);
+
 export function avenant(result) {
   const d = result.meta;
+  const arts = amendmentClauses(result);
   const lines = [];
   lines.push(`AVENANT N° 1 AU CONTRAT « ${d.outil.toUpperCase()} »`);
   lines.push(`Entre le Client et ${d.fournisseur} (le « Fournisseur »)`);
@@ -312,8 +316,8 @@ export function avenant(result) {
   lines.push("");
   lines.push("Préambule");
   lines.push(`Le Client souhaite utiliser le service ${d.outil} pour l'usage suivant : ${d.cas_usage} Les parties conviennent de compléter et de modifier le contrat initial par les stipulations ci-dessous, qui prévalent sur toute stipulation contraire.`);
-  result.clauses_correctives.forEach((c, i) => { lines.push(""); lines.push(`Article ${i + 1}. ${c.sujet}`); lines.push(c.texte); });
-  lines.push(""); lines.push(`Article ${result.clauses_correctives.length + 1}. Portée`);
+  arts.forEach((c, i) => { lines.push(""); lines.push(`Article ${i + 1}. ${c.sujet}`); lines.push(c.texte); });
+  lines.push(""); lines.push(`Article ${arts.length + 1}. Portée`);
   lines.push("Le présent avenant fait partie intégrante du contrat. Les autres stipulations demeurent inchangées. En cas de contradiction, l'avenant prévaut.");
   return lines.join("\n");
 }

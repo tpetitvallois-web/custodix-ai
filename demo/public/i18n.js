@@ -32,7 +32,7 @@ const DICT = {
     "pv.kicker": "Aperçu d'un dossier",
     "pv.title": "Chaque observation renvoie au texte.",
     "pv.body": "Choisissez un domaine : le passage du contrat qui fonde l'observation s'affiche. Sans passage, le domaine est signalé comme à examiner.",
-    "pv.open": "Ouvrir ce dossier dans la démo", "pv.amend": "Rédiger l'avenant", "pv.amend.n": "clauses à corriger", "pv.amend.none": "Aucune clause à corriger : le contrat couvre déjà les points examinés.", "pv.amend.title": "Projet d'avenant", "pv.amend.note": "Préparé par Aucteva à partir des clauses relevées. Document de travail, à relire et négocier par un avocat.", "pv.amend.more": "Voir les autres cas",
+    "pv.open": "Ouvrir ce dossier dans la démo", "pv.amend": "Rédiger l'avenant", "pv.amend.n": "clauses à corriger ou ajouter", "pv.amend.arts": "articles", "pv.amend.none": "Aucune clause à corriger : le contrat couvre déjà les points examinés.", "pv.amend.title": "Projet d'avenant", "pv.amend.note": "Préparé par Aucteva à partir des clauses relevées. Document de travail, à relire et négocier par un avocat.", "pv.amend.more": "Voir les autres cas",
     "pv.doc": "Contrat du scénario",
     "pv.nocite": "Aucune clause sur ce domaine dans le contrat. Point à examiner par l'avocat.",
 
@@ -204,7 +204,7 @@ const DICT = {
     "pv.kicker": "Inside a file",
     "pv.title": "Every observation points back to the text.",
     "pv.body": "Pick an area: the contract passage behind the observation appears. Without a passage, the area is flagged for review.",
-    "pv.open": "Open this file in the demo", "pv.amend": "Draft the amendment", "pv.amend.n": "clauses to fix", "pv.amend.none": "No clause to fix: the contract already covers the reviewed points.", "pv.amend.title": "Draft amendment", "pv.amend.note": "Prepared by Aucteva from the clauses found. Working document, to be reviewed and negotiated by a lawyer. The amendment text is in French.", "pv.amend.more": "See other use cases",
+    "pv.open": "Open this file in the demo", "pv.amend": "Draft the amendment", "pv.amend.n": "clauses to fix or add", "pv.amend.arts": "articles", "pv.amend.none": "No clause to fix: the contract already covers the reviewed points.", "pv.amend.title": "Draft amendment", "pv.amend.note": "Prepared by Aucteva from the clauses found. Working document, to be reviewed and negotiated by a lawyer. The amendment text is in French.", "pv.amend.more": "See other use cases",
     "pv.doc": "Scenario contract",
     "pv.nocite": "No clause on this area in the contract. To be reviewed by the lawyer.",
 
