@@ -19,7 +19,7 @@ export const TOPICS = [
     applies: () => true, weightAbsent: 8,
     dangerous: [/(entra[iî]n(er|ement)|affiner)[^.]{0,120}mod[èe]les?/i, /licence[^.]{0,160}entra[iî]n/i],
     ambiguous: [/am[ée]liorer[^.]{0,80}(mod[èe]les|services|produits|qualit[ée])/i, /donn[ée]es d[ée]riv[ée]es/i, /programmes? d'am[ée]lioration/i],
-    protective: [/s'interdit[^.]{0,80}(entra[iî]n|affiner|am[ée]liorer)/i, /(n'utilise|ne sont pas utilis|aucune? (donn[ée]e|contenu)[^.]{0,40}(entra[iî]n))/i, /uniquement pour fournir le service/i],
+    protective: [/s'interdit[^.]{0,80}(entra[iî]n|affiner|am[ée]liorer)/i, /(n'utilise|n'utilisera|ne sont pas utilis|ne seront pas utilis)[^.]{0,120}(entra[iî]n|affiner|am[ée]liorer[^.]{0,40}mod[èe]les?)/i, /aucune? (donn[ée]e|contenu)[^.]{0,60}(entra[iî]n|affin)/i, /uniquement pour fournir le service/i],
     fix: "Le Fournisseur s'interdit d'utiliser les données, documents, requêtes et résultats du Client pour entraîner, affiner, tester ou améliorer tout modèle d'intelligence artificielle, le sien ou celui d'un tiers. Les programmes d'amélioration sont désactivés par défaut pour le Client.",
   },
   {
@@ -55,7 +55,7 @@ export const TOPICS = [
     applies: (c) => c.personal || c.confidential, weightAbsent: 6,
     dangerous: [/sans engagement de d[ée]lai/i, /lorsqu'elle l'estimera n[ée]cessaire/i],
     ambiguous: [/d[ée]lai raisonnable/i, /compte tenu des circonstances/i],
-    protective: [/(24|vingt-quatre|48|quarante-huit|72|soixante-douze) \(?\d*\)? ?heures/i],
+    protective: [/(violation|incident|notifi)[^.]{0,160}(24|vingt-quatre|48|quarante-huit|72|soixante-douze) \(?\d*\)? ?heures/i, /(24|vingt-quatre|48|quarante-huit|72|soixante-douze) \(?\d*\)? ?heures[^.]{0,160}(violation|incident)/i],
     fix: "Toute violation de données à caractère personnel ou tout incident de sécurité affectant les données du Client est notifié au Client dans les vingt-quatre (24) heures suivant sa découverte, avec les informations prévues à l'article 33.3 du RGPD, puis complété au fil de l'enquête.",
   },
   {

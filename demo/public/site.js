@@ -370,7 +370,7 @@ const LEGAL = {
       <h2>Finalité et base légale</h2>
       <p>Ces données servent à préparer l'avis demandé et à tenir le registre de la démonstration. La base légale est l'intérêt légitime à faire fonctionner le service que vous utilisez. Aucune donnée n'est vendue ni utilisée à des fins publicitaires.</p>
       <h2>Destinataires et hébergement</h2>
-      <p>Le site et le registre sont hébergés par Cloudflare. La lecture des contrats est exécutée sur l'infrastructure de GitHub, par le modèle de langage d'un fournisseur tiers. Ne transmettez donc aucune donnée personnelle dans les contrats ou les messages. Ces prestataires peuvent traiter des données hors de l'Union européenne, dans le cadre des clauses contractuelles types de la Commission européenne.</p>
+      <p>Le site et le registre sont hébergés par Cloudflare. La lecture des contrats est confiée au modèle de langage d'un fournisseur tiers. Le texte lui est transmis depuis un ordinateur de l'équipe Aucteva ou, en secours, depuis l'infrastructure de GitHub. Ne transmettez donc aucune donnée personnelle dans les contrats ou les messages. Ces prestataires peuvent traiter des données hors de l'Union européenne, dans le cadre des clauses contractuelles types de la Commission européenne.</p>
       <h2>Durée de conservation</h2>
       <p>Les dossiers et conversations sont conservés pendant la durée du concours Make AI Happen 2026, puis supprimés.</p>
       <h2>Vos droits</h2>
