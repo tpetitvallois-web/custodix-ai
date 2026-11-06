@@ -5,7 +5,7 @@ const pres = new pptxgen();
 pres.layout = "LAYOUT_WIDE";
 pres.author = "Céline Lin, Tom Petit Vallois";
 pres.title = "Aucteva, Make AI Happen 2026, thème 3";
-const URL = "custodix-ai.gererseul-avis-worker.workers.dev";
+const URL = "aucteva.gererseul-avis-worker.workers.dev";
 const notes = JSON.parse(fs.readFileSync("notes.json", "utf8"));
 for (let i = 1; i <= 5; i++) {
   const s = pres.addSlide();

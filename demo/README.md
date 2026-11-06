@@ -2,7 +2,7 @@
 
 Aucteva transforme le contrat d'un fournisseur d'IA et le cas d'usage prévu en un dossier d'analyse documenté : huit domaines de vigilance (regroupant douze sujets), chaque observation reliée à une citation vérifiée dans le texte, proposition d'avis et niveau de vigilance sur 100, conditions, avenant type. Trois temps distincts et tracés : avis préparé par l'IA, avis validé par l'avocat, décision d'utilisation par une personne habilitée. Le tout alimente un registre de gouvernance.
 
-En ligne : https://custodix-ai.gererseul-avis-worker.workers.dev (compte Cloudflare perso de Tom). L'adresse garde l'ancien nom : renommer le Worker changerait l'adresse et repartirait d'un registre vide.
+En ligne : https://aucteva.gererseul-avis-worker.workers.dev (compte Cloudflare perso de Tom). Cette adresse est un petit Worker relais (`proxy/`, service binding) vers le Worker `custodix-ai`, qui garde le registre : renommer ce dernier repartirait d'un Durable Object vide. L'ancienne adresse custodix-ai.gererseul-avis-worker.workers.dev redirige les visiteurs vers la nouvelle et continue de servir l'API et le MCP (pont, connecteurs déjà branchés).
 
 ## Interface (public/, modules ES sans build)
 

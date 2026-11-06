@@ -15,7 +15,7 @@ const GREEN = "2E5E3F", AMBER = "9A6B1E", BRICK = "8E3B2F";
 const SERIF = "Charter", BODY = "Barlow", SEMI = "Barlow SemiBold";
 const THEME = { name: BRAND, headFontFace: SERIF, bodyFontFace: BODY, colors: { dk1: INK, lt1: PAPER, dk2: MUTED, lt2: SOFT, accent1: NAVY, accent2: MUTED, accent3: LINE, accent4: GREEN, accent5: AMBER, accent6: BRICK, hlink: NAVY, folHlink: MUTED } };
 const W = 13.33, H = 7.5, M = 1.0, CW = W - 2 * M, TOP = 1.72, BOT = 6.5;
-const DEMO_URL = process.env.DEMO_URL || "custodix-ai.gererseul-avis-worker.workers.dev";
+const DEMO_URL = process.env.DEMO_URL || "aucteva.gererseul-avis-worker.workers.dev";
 const HREF = "https://" + DEMO_URL + "/";
 const RATIO = 2560 / 1500; // toutes les captures
 const positions = {}; // positions du bouton, pour le PPTX en images

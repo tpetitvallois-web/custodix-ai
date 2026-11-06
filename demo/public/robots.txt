@@ -3,4 +3,4 @@ Allow: /
 Disallow: /api/
 Disallow: /mcp
 
-Sitemap: https://custodix-ai.gererseul-avis-worker.workers.dev/sitemap.xml
+Sitemap: https://aucteva.gererseul-avis-worker.workers.dev/sitemap.xml

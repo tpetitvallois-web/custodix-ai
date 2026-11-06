@@ -12,6 +12,8 @@ const PONT_TIMEOUT = 10 * 60 * 1000; // un dossier pris par le pont et sans rép
 const PONT_ONLINE = 45 * 1000;
 const CHUNK = 40_000; // caractères par tranche de contrat stockée // le pont est « en ligne » s'il a interrogé la file depuis moins de 45 s
 
+const PUBLIC_HOST = "aucteva.gererseul-avis-worker.workers.dev"; // relais Worker « aucteva » (demo/proxy)
+const OLD_HOST = "custodix-ai.gererseul-avis-worker.workers.dev";
 const QUOTA_IP = 60; // lectures par adresse et par jour (un jury derrière une même adresse doit pouvoir tester)
 const QUOTA_JOUR = 400; // lectures par jour, toutes adresses confondues
 
@@ -417,7 +419,7 @@ async function extraction(body) {
   if (u.protocol !== "https:" && u.protocol !== "http:") return err("Seules les adresses http(s) sont acceptées.");
   if (/^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|\[?::1)/.test(u.hostname)) return err("Adresse refusée.");
   let r;
-  try { r = await fetch(u.toString(), { headers: { "user-agent": "Mozilla/5.0 (compatible; Aucteva/1.0; +https://custodix-ai.gererseul-avis-worker.workers.dev)", accept: "text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.5" }, redirect: "follow", cf: { cacheTtl: 0 } }); }
+  try { r = await fetch(u.toString(), { headers: { "user-agent": "Mozilla/5.0 (compatible; Aucteva/1.0; +https://aucteva.gererseul-avis-worker.workers.dev)", accept: "text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.5" }, redirect: "follow", cf: { cacheTtl: 0 } }); }
   catch (e) { return err("La page n'a pas pu être récupérée : " + (e.message || e)); }
   if (!r.ok) return err(`La page répond ${r.status}. Si le site bloque les robots, copiez le texte ou déposez le PDF.`);
   const type = (r.headers.get("content-type") || "").toLowerCase();
@@ -452,6 +454,11 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (url.protocol === "http:" && url.hostname !== "localhost" && url.hostname !== "127.0.0.1") { url.protocol = "https:"; return Response.redirect(url.toString(), 301); }
+    // Ancienne adresse : les visiteurs passent sur l'adresse Aucteva (le fragment #/... est conservé par le navigateur).
+    // L'API et le MCP restent servis ici, pour le pont et les connecteurs déjà branchés.
+    if (url.hostname === OLD_HOST && request.method === "GET" && !url.pathname.startsWith("/api/") && !url.pathname.startsWith("/mcp") && (request.headers.get("accept") || "").includes("text/html")) {
+      url.hostname = PUBLIC_HOST; return Response.redirect(url.toString(), 301);
+    }
     if (url.pathname === "/mcp" || url.pathname === "/mcp/") {
       const registre = env.REGISTRE.get(env.REGISTRE.idFromName("principal"));
       const quota = async () => registre.quota(await empreinte(request, env));

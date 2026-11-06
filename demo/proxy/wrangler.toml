@@ -1,0 +1,10 @@
+# Adresse publique d'Aucteva : aucteva.gererseul-avis-worker.workers.dev.
+# Ce Worker ne fait que relayer vers le Worker « custodix-ai », qui garde le registre (Durable Object) et ses données.
+name = "aucteva"
+main = "index.js"
+account_id = "e2d939d2a4a4c9453d118a18388bfcb4"
+compatibility_date = "2026-09-01"
+
+[[services]]
+binding = "ORIGIN"
+service = "custodix-ai"
