@@ -1,0 +1,9 @@
+# Adresse publique d'Aucteva : https://aucteva.pages.dev
+# Projet Pages en mode avancé : _worker.js relaie chaque requête vers le Worker « custodix-ai », qui garde le registre.
+name = "aucteva"
+pages_build_output_dir = "./site"
+compatibility_date = "2026-09-01"
+
+[[services]]
+binding = "ORIGIN"
+service = "custodix-ai"

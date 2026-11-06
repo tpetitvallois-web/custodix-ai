@@ -2,7 +2,7 @@
 // Dossier de référence : RecruiterAI ouvert par conversation (CV-2026-0003 → CX-2026-0050), lu en intégralité.
 // L'examen en cours se capture sur une lecture intégrale lancée depuis la page démo (le lecteur doit être en ligne).
 const { chromium } = require("playwright");
-const URL = "https://aucteva.gererseul-avis-worker.workers.dev/";
+const URL = "https://aucteva.pages.dev/";
 const CONV = "CV-2026-0003", ID = "CX-2026-0050";
 const VP = { width: 1280, height: 750 }; // ratio 1,707, celui des cadres du deck
 (async () => {
