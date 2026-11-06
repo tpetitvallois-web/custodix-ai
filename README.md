@@ -1,6 +1,6 @@
-# Custodix AI, Make AI Happen 2026 (KPMG), thème 3
+# Aucteva (anciennement Custodix AI), Make AI Happen 2026 (KPMG), thème 3
 
-Chaque IA passe par Custodix. Autorisation et gouvernance des outils d'intelligence artificielle en entreprise.
+Chaque outil d'IA, une décision documentée. Gouvernance juridique des outils d'intelligence artificielle en entreprise.
 Projet de Céline Lin et Tom Petit Vallois, M2 Innovation, Management des Technologies et Entrepreneuriat,
 Paris 1 Panthéon-Sorbonne. A remplacé « Boussole » (~/kpmg-make-ai-happen) le 5 novembre 2026, puis renommé
 de Kleros AI en Custodix AI le même soir, avec un ton de cabinet d'avocats (avis, qualification du risque, validation par un avocat).

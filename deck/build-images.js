@@ -4,7 +4,7 @@ const fs = require("fs");
 const pres = new pptxgen();
 pres.layout = "LAYOUT_WIDE";
 pres.author = "Céline Lin, Tom Petit Vallois";
-pres.title = "Custodix AI, Make AI Happen 2026, thème 3";
+pres.title = "Aucteva, Make AI Happen 2026, thème 3";
 const URL = "custodix-ai.gererseul-avis-worker.workers.dev";
 const notes = JSON.parse(fs.readFileSync("notes.json", "utf8"));
 for (let i = 1; i <= 5; i++) {
@@ -19,4 +19,4 @@ for (let i = 1; i <= 5; i++) {
     s.addText([{ text: URL, options: { hyperlink: { url: "https://" + URL + "/" }, color: "10233F", underline: { style: "sng" } } }], { x: b.x, y: b.y + b.h + 0.08, w: b.w, h: 0.25, isTextBox: true, margin: 0, fontFace: "Arial", fontSize: 9, align: "center", valign: "top" });
   }
 }
-pres.writeFile({ fileName: "custodix-ai-agorize-images.pptx" }).then(() => console.log("ok custodix-ai-agorize-images.pptx"));
+pres.writeFile({ fileName: "aucteva-agorize-images.pptx" }).then(() => console.log("ok aucteva-agorize-images.pptx"));

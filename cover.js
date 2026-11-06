@@ -8,8 +8,8 @@ function wordmark(text, file, ps, size) {
   return { d: parts.join(""), adv: x };
 }
 const CH = "/System/Library/Fonts/Supplemental/Charter.ttc";
-const logo = wordmark("Custodix AI", CH, "Charter-Roman", 300);
-const slogan = wordmark("Chaque IA passe par Custodix.", CH, "Charter-Roman", 84);
+const logo = wordmark("Aucteva", CH, "Charter-Roman", 300);
+const slogan = wordmark("Chaque outil d'IA. Une décision documentée.", CH, "Charter-Roman", 84);
 const sub = wordmark("Autorisation et gouvernance des outils d'intelligence artificielle en entreprise", os.homedir() + "/Library/Fonts/Barlow-Regular.ttf", null, 50);
 const y0 = 500;
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><rect width="${W}" height="${H}" fill="#FFFFFF"/>
@@ -17,4 +17,4 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" 
 <rect x="${W / 2 - 60}" y="${y0 + 70}" width="120" height="4" fill="${NAVY}"/>
 <g transform="translate(${(W - slogan.adv) / 2} ${y0 + 190})" fill="${NAVY}">${slogan.d}</g>
 <g transform="translate(${(W - sub.adv) / 2} ${y0 + 290})" fill="${GREY}">${sub.d}</g></svg>`;
-sharp(Buffer.from(svg)).resize(1024, 576).png().toFile("custodix-ai-1024x576.png").then(() => console.log("ok custodix-ai-1024x576.png"));
+sharp(Buffer.from(svg)).resize(1024, 576).png().toFile("aucteva-1024x576.png").then(() => console.log("ok aucteva-1024x576.png"));

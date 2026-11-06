@@ -1,15 +1,15 @@
-// Deck « Custodix AI », Make AI Happen 2026 (KPMG), thème 3.
+// Deck « Aucteva » (anciennement Custodix AI), Make AI Happen 2026 (KPMG), thème 3.
 // Gabarit de cabinet : kicker + titre, navigation des sections en haut à droite, bandeau de pied avec logotype et numéro.
 // Formats : tableaux à filets, paragraphes à intertitres, encadrés, grille, captures de la démonstration, bouton vers la démo.
 // Aucune frise, aucune liste à puces ou à tirets, aucune icône. Un seul accent bleu nuit, pastilles sobres pour les trois issues.
-//   custodix-ai-oral.pptx    : 8 slides + 3 annexes (demi-finale)
-//   custodix-ai-agorize.pptx : 5 slides (limite du formulaire, business plan inclus)
+//   aucteva-oral.pptx    : 8 slides + 3 annexes (demi-finale)
+//   aucteva-agorize.pptx : 5 slides (limite du formulaire, business plan inclus)
 // NODE_PATH=$PWD/node_modules PPTX_SKILL=… node build.js
 const pptxgen = require("pptxgenjs");
 const fs = require("fs");
 const { applyTheme } = require(process.env.PPTX_SKILL + "/scripts/apply_theme.js");
 
-const BRAND = "Custodix AI";
+const BRAND = "Aucteva";
 const PAPER = "FFFFFF", INK = "26292E", MUTED = "6B6F76", LINE = "D9DBDF", NAVY = "10233F", SOFT = "F3F4F6", GREY = "9A9DA3";
 const GREEN = "2E5E3F", AMBER = "9A6B1E", BRICK = "8E3B2F";
 const SERIF = "Charter", BODY = "Barlow", SEMI = "Barlow SemiBold";
@@ -148,14 +148,14 @@ const ISSUES = [
   [AMBER, "Autorisé sous conditions", "des mesures ou un avenant sont nécessaires avant un déploiement élargi"],
   [BRICK, "Non autorisé en l'état", "le risque est trop élevé ou le contrat doit être modifié"],
 ];
-const POSITION = "Custodix AI ne remplace pas la gestion contractuelle ni l'avocat. Il prépare une décision d'usage, documentée et validée par un expert.";
+const POSITION = "Aucteva ne remplace pas la gestion contractuelle ni l'avocat. Il prépare une décision d'usage, documentée et validée par un expert.";
 const KPMG_PARAS = [
   ["Quatre expertises réunies", "juridique, fiscale, conformité et cybersécurité : les quatre regards d'un dossier d'autorisation, dans une même équipe."],
   ["Validation par des avocats", "l'avis engage une relecture et une validation humaines. C'est ce qui le distingue d'un questionnaire ou d'un inventaire."],
-  ["Intégration aux outils en place", "les contrats des grands comptes sont déjà centralisés dans leurs plateformes contractuelles. Custodix AI s'y branche, sans les remplacer."],
+  ["Intégration aux outils en place", "les contrats des grands comptes sont déjà centralisés dans leurs plateformes contractuelles. Aucteva s'y branche, sans les remplacer."],
   ["Déploiement multi-pays et accompagnement continu", "veille réglementaire, avenants, gouvernance et reporting, dans chaque pays où le groupe opère."],
 ];
-const KPMG_LINE = "Les plateformes contractuelles structurent les contrats. Custodix AI aide à décider comment un outil IA peut être utilisé.";
+const KPMG_LINE = "Les plateformes contractuelles structurent les contrats. Aucteva aide à décider comment un outil IA peut être utilisé.";
 const SERVICE = [
   ["Diagnostic initial", "Cartographie des outils IA déjà en usage dans le groupe et de leurs niveaux de risque. Un premier registre, en quelques semaines."],
   ["Autorisation continue", "Examen de chaque nouvel outil avant déploiement : contrat, cas d'usage, données. Un avis par outil, validé par un avocat."],
@@ -173,14 +173,14 @@ const PILOT = "Pilote proposé : trois mois, deux grands comptes, vingt outils e
 const SRC = "Source : Microsoft et LinkedIn, Work Trend Index 2024 : 78 % des utilisateurs d'IA au travail apportent leurs propres outils, sans validation de l'entreprise.";
 const CAP = {
   formulaire: "Le dossier déposé : outil, fournisseur, usage prévu, données concernées, contrat.",
-  examen: "L'examen, étape par étape : contrat, clauses, cas d'usage, RGPD et AI Act.",
-  dossier: "Le dossier d'autorisation : avis, niveau de vigilance, en attente de validation.",
-  valide: "Le même dossier une fois validé par l'avocat, avec l'identifiant de signature.",
-  risques: "Chaque risque cite la clause du contrat et l'article applicable.",
-  avenant: "L'avenant type généré à partir des clauses correctives, prêt à négocier.",
-  accueil: "L'accueil : on décrit l'outil, on dépose son contrat, l'assistant ne demande que ce qui manque.",
-  conversation: "La conversation : le dossier est déduit du contrat, l'avis arrive dans l'échange, le dossier est au registre.",
-  connecteur: "Le connecteur : chacun branche son propre assistant, les citations sont vérifiées par Custodix.",
+  examen: "L'analyse suit l'état réel du dossier : documents reçus, contenu extrait, lecture, vérification des citations.",
+  dossier: "Le dossier d'analyse : le contrat à gauche, les huit domaines de vigilance à droite, chaque passage cité surligné.",
+  valide: "Trois temps tracés : avis préparé par l'IA, validé par l'avocat, décision de l'entreprise.",
+  risques: "Chaque observation renvoie à sa clause et à sa ligne, avec ce qu'il faut vérifier et la clause corrective.",
+  avenant: "Le dossier de synthèse, exportable en PDF, avec l'avenant type prêt à négocier.",
+  accueil: "L'accueil : la promesse, et la vraie interface, calculée en direct sur un scénario.",
+  conversation: "La conversation : le dossier est déduit du contrat, l'avis arrive dans l'échange.",
+  connecteur: "Le connecteur : chacun branche son propre assistant, les citations sont vérifiées par Aucteva.",
 };
 const ENTREES = "Trois entrées : la conversation, le formulaire, ou son propre assistant par connecteur. Le contrat est lu en entier dans sa langue, chaque citation vérifiée mot pour mot ; barème, points bloquants et avis sont calculés par le cabinet. Testé sur 34 contrats réels : OpenAI, Mistral, Intercom, HubSpot, HireVue.";
 const examplesTable = (c, s, x, y, w, size = 11) => c.table(s, x, y, w, [w * 0.17, w * 0.52, w * 0.31], ["Outil", "Usage et données", "Avis"], EXAMPLES.map(([col, n, u, d, a]) => [n, `${u} (${d})`, [DOT(col), { text: a }]]), { size });
@@ -191,9 +191,9 @@ const cover = ({ add, T, rule, shot, foot }) => {
   T(s, "Make AI Happen, KPMG | Thématique 3 : cabinet d'avocats AI ready", { x: M, y: 0.8, w: 7, h: 0.3, fontSize: 11, color: MUTED });
   T(s, BRAND, { x: M, y: 1.9, w: 6.5, h: 1.1, fontFace: SERIF, fontSize: 56, color: INK });
   rule(s, M, 3.05, 1.5, NAVY, 1.5);
-  T(s, "Chaque IA passe par Custodix.", { x: M, y: 3.28, w: 6.5, h: 0.5, fontFace: SERIF, fontSize: 24, color: NAVY });
-  T(s, "Autorisation et gouvernance des outils d'intelligence artificielle en entreprise.", { x: M, y: 3.9, w: 5.8, h: 0.7, fontSize: 15, color: INK, lineSpacingMultiple: 1.3 });
-  T(s, "Un service conçu pour les directions juridiques, conformité, achats et IT.", { x: M, y: 4.62, w: 5.8, h: 0.6, fontSize: 13, color: MUTED, lineSpacingMultiple: 1.3 });
+  T(s, "Chaque outil d'IA.\nUne décision documentée.", { x: M, y: 3.25, w: 6.5, h: 0.95, fontFace: SERIF, fontSize: 24, color: NAVY, lineSpacingMultiple: 1.05 });
+  T(s, "Gouvernance juridique des outils d'intelligence artificielle en entreprise.", { x: M, y: 4.35, w: 5.8, h: 0.7, fontSize: 15, color: INK, lineSpacingMultiple: 1.3 });
+  T(s, "Un service conçu pour les directions juridiques, conformité, achats et IT.", { x: M, y: 5.05, w: 5.8, h: 0.6, fontSize: 13, color: MUTED, lineSpacingMultiple: 1.3 });
   T(s, "Préparé par Céline Lin et Tom Petit Vallois", { x: M, y: 6.3, w: 6, h: 0.3, fontSize: 12, color: INK });
   shot(s, "shots/dossier.png", 7.1, 1.9, 5.23, CAP.dossier);
   foot(s, "", 0);
@@ -225,7 +225,7 @@ const processus = ({ add, H2, LEAD, COL, table, callout, foot }, n) => {
   H2(s, "Aujourd'hui, l'autorisation d'un outil IA repose sur des échanges dispersés.", "Le processus actuel", "Problème");
   LEAD(s, "Achats, juridique, DPO et IT examinent le même dossier séparément. Il manque une vue commune, une traçabilité et une décision formalisée.", M, TOP, 9.5, 0.8, { fontSize: 14 });
   COL(s, "Ce qui change avec un service d'autorisation", M, 2.6, CW);
-  table(s, M, 3.0, CW, [CW * 0.18, CW * 0.41, CW * 0.41], ["", "Aujourd'hui", "Avec Custodix AI"], AVANT_APRES, { size: 11.5, rowH: 0.44 });
+  table(s, M, 3.0, CW, [CW * 0.18, CW * 0.41, CW * 0.41], ["", "Aujourd'hui", "Avec Aucteva"], AVANT_APRES, { size: 11.5, rowH: 0.44 });
   callout(s, M, 5.85, CW, 0.6, "Sans décision formalisée, l'outil est déployé sans réponse, ou refusé par prudence. Dans les deux cas, l'entreprise ne sait pas.", 12.5);
   foot(s, "", n);
   s.addNotes("Le processus actuel face au service : examen, traçabilité, décision, délai, suivi.");
@@ -237,7 +237,7 @@ const solution = ({ add, H2, COL, shot, table, callout, issue, foot }, n) => {
   const lw = 5.0, rx = M + lw + 0.45, rw = CW - lw - 0.45;
   const h = shot(s, "shots/examen.png", M, TOP, lw, CAP.examen);
   callout(s, M, TOP + h + 0.55, lw, BOT - (TOP + h + 0.55), POSITION, 12.5);
-  COL(s, "Ce que Custodix AI examine dans chaque contrat", rx, TOP, rw);
+  COL(s, "Ce qu'Aucteva examine dans chaque contrat", rx, TOP, rw);
   table(s, rx, TOP + 0.45, rw, [rw * 0.33, rw * 0.42, rw * 0.25], ["Sujet", "Ce qui est vérifié", "Base"], EXAMEN, { size: 9.5, headSize: 9, rowH: 0.3 });
   const iy = 5.55, iw = rw / 3;
   ISSUES.forEach(([c, l, d], i) => issue(s, rx + i * iw, iy, iw - 0.1, c, l, d, { size: 10.5, descSize: 9 }));
@@ -354,7 +354,7 @@ const problemeProcessus = ({ add, H2, LEAD, COL, paras, table, foot }, n) => {
   COL(s, "Quatre regards, en série, sur le même contrat", M, 2.95, lw);
   paras(s, M, 3.4, lw, 3.1, REGARDS, { size: 12 });
   COL(s, "Ce qui change avec un service d'autorisation", rx, TOP, rw);
-  table(s, rx, TOP + 0.45, rw, [rw * 0.2, rw * 0.4, rw * 0.4], ["", "Aujourd'hui", "Avec Custodix AI"], AVANT_APRES, { size: 10.5, rowH: 0.62 });
+  table(s, rx, TOP + 0.45, rw, [rw * 0.2, rw * 0.4, rw * 0.4], ["", "Aujourd'hui", "Avec Aucteva"], AVANT_APRES, { size: 10.5, rowH: 0.62 });
   foot(s, SRC, n);
   s.addNotes("Le problème et le processus actuel, en une slide.");
 };
@@ -394,7 +394,7 @@ const solutionAgorize = ({ add, H2, COL, shot, table, callout, issue, foot }, n)
   const lw = 5.0, rx = M + lw + 0.45, rw = CW - lw - 0.45;
   const h = shot(s, "shots/dossier.png", M, TOP, lw, CAP.dossier);
   callout(s, M, TOP + h + 0.55, lw, BOT - (TOP + h + 0.55), POSITION, 12.5);
-  COL(s, "Ce que Custodix AI examine dans chaque contrat", rx, TOP, rw);
+  COL(s, "Ce qu'Aucteva examine dans chaque contrat", rx, TOP, rw);
   table(s, rx, TOP + 0.45, rw, [rw * 0.33, rw * 0.42, rw * 0.25], ["Sujet", "Ce qui est vérifié", "Base"], EXAMEN, { size: 9.5, headSize: 9, rowH: 0.3 });
   const iy = 5.55, iw = rw / 3;
   ISSUES.forEach(([c, l, d], i) => issue(s, rx + i * iw, iy, iw - 0.1, c, l, d, { size: 10.5, descSize: 9 }));
@@ -403,7 +403,7 @@ const solutionAgorize = ({ add, H2, COL, shot, table, callout, issue, foot }, n)
 };
 
 (async () => {
-  await makeDeck("custodix-ai-oral.pptx", [cover, probleme, processus, solution, issuesSlide, kpmg, service, exemples, demoSlide, annexeRoute, annexeRisques, annexeEco], `${BRAND}, Make AI Happen 2026, thème 3, version orale`, ["Problème", "Solution", "Pourquoi KPMG", "Modèle de service", "Démonstration", "Annexes"]);
-  await makeDeck("custodix-ai-agorize.pptx", [cover, problemeProcessus, solutionAgorize, kpmgService, demoAgorize], `${BRAND}, Make AI Happen 2026, thème 3`, ["Problème", "Solution", "KPMG et modèle de service", "Démonstration"]);
+  await makeDeck("aucteva-oral.pptx", [cover, probleme, processus, solution, issuesSlide, kpmg, service, exemples, demoSlide, annexeRoute, annexeRisques, annexeEco], `${BRAND}, Make AI Happen 2026, thème 3, version orale`, ["Problème", "Solution", "Pourquoi KPMG", "Modèle de service", "Démonstration", "Annexes"]);
+  await makeDeck("aucteva-agorize.pptx", [cover, problemeProcessus, solutionAgorize, kpmgService, demoAgorize], `${BRAND}, Make AI Happen 2026, thème 3`, ["Problème", "Solution", "KPMG et modèle de service", "Démonstration"]);
   fs.writeFileSync("link-positions.json", JSON.stringify(positions, null, 2));
 })();
