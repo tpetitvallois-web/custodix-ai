@@ -27,6 +27,7 @@ const ONCE = process.argv.includes("--once");
 const ONCE_GRACE_MS = Number(process.env.PONT_ONCE_GRACE_MS || 20000); // en mode --once, on attend encore un peu un dossier qui arriverait juste après
 
 if (!TOKEN) { console.error("PONT_TOKEN manquant (fichier pont/.env)."); process.exit(1); }
+if (ONCE && process.env.GITHUB_ACTIONS && !process.env.CLAUDE_CODE_OAUTH_TOKEN) { console.log("CLAUDE_CODE_OAUTH_TOKEN absent : rien à faire sur GitHub, aucun dossier réclamé."); process.exit(0); }
 
 const log = (...a) => console.log(new Date().toISOString().slice(0, 19).replace("T", " "), ...a);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
