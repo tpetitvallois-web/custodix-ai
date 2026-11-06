@@ -31,7 +31,8 @@ jobs:
           node-version: 22
 
       - name: Installer Claude Code
-        run: npm install -g @anthropic-ai/claude-code
+        # Version figée : celle vérifiée le 2026-11-06 (lecture Mac éteint, 42 s). Changer ce numéro après un essai.
+        run: npm install -g @anthropic-ai/claude-code@2.1.319 && claude --version
 
       - name: Lire les dossiers en attente
         env:
