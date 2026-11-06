@@ -1,6 +1,6 @@
 // Dossier d'analyse : document source et analyse côte à côte, dossier de synthèse, validation juridique et décision d'utilisation.
 import { t, getLang } from "./i18n.js";
-import { api, esc, fmtInt, fmtDay, ICON, avisPill, decisionPill, stagePill, dimensionsOf, constatsOf, statusKey, CLAUSE, clausePill, copy, toast, session, slug, go } from "./ui.js";
+import { LOGO, api, esc, fmtInt, fmtDay, ICON, avisPill, decisionPill, stagePill, dimensionsOf, constatsOf, statusKey, CLAUSE, clausePill, copy, toast, session, slug, go } from "./ui.js";
 import { shellLayout, invalidate } from "./shell.js";
 import { avenant, amendmentClauses, MENTION, TOPICS } from "./engine.js";
 import { fold, locate, renderDoc, sectionOf, scrollWithin } from "./doc.js";
@@ -196,7 +196,7 @@ function paintSummary(body, d) {
   body.innerHTML = `
     ${getLang() === "en" ? `<p class="small muted no-print" style="max-width:860px;margin:0 auto 12px">${t("ws.contentFr")}</p>` : ""}
     <article class="paper">
-      <div class="paper__brand"><span class="logo" style="color:var(--ink)"><svg class="logo__mark" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect width="24" height="24" rx="6" fill="currentColor"/><path d="M7 17.5 12 6.5l5 11M8.9 13.5h6.2" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="logo__word" style="font-size:15px">Aucteva</span></span><span>Dossier ${esc(d.id)} · ${esc(fmtDay(d.cree))}</span></div>
+      <div class="paper__brand"><span class="paper__logo" style="color:var(--navy)">${LOGO}</span><span>Dossier ${esc(d.id)} · ${esc(fmtDay(d.cree))}</span></div>
       <div class="small muted">Dossier de synthèse</div>
       <h1>${esc(m.outil)}</h1>
       <div class="muted">${esc(m.fournisseur)}</div>

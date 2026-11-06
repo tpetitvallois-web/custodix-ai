@@ -775,3 +775,12 @@ p { margin: 0 0 12px; }
 .ent__body ol li::marker { color: var(--muted); font-variant-numeric: tabular-nums; }
 .ent__body strong { font-weight: 600; }
 @media (max-width: 600px) { .composer textarea { min-height: 64px; font-size: 16px; } .composer__row { align-items: flex-start; } }
+
+/* Logo */
+.logo__svg { display: block; height: 22px; width: auto; }
+.sitebar .logo, .sitefoot .logo, .side .logo, .topm .logo { color: #fff; }
+.sitefoot .logo__svg { height: 24px; }
+.side .logo__svg { height: 21px; }
+.topm .logo__svg { height: 19px; }
+.paper__logo .logo__svg { height: 18px; }
+.ent__av--ai svg { width: 30px; height: auto; }

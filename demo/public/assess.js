@@ -1,6 +1,6 @@
 // Ouverture d'un dossier : parcours guidé (description, documents), suivi de l'analyse, conversation avec l'assistant.
 import { t, getLang } from "./i18n.js";
-import { api, esc, fmtInt, fmtSize, countWords, ICON, toast, session, avisPill, slug, go } from "./ui.js";
+import { MARK, api, esc, fmtInt, fmtSize, countWords, ICON, toast, session, avisPill, slug, go } from "./ui.js";
 import { shellLayout, invalidate } from "./shell.js";
 import { analyse } from "./engine.js";
 import { SCENARIOS, CATEGORIES } from "./scenarios.js";
@@ -300,7 +300,6 @@ const paras = (txt) => {
   }
   return out.map((x) => (typeof x === "string" ? x : `<${x.kind}>${x.items.map((i) => `<li>${i}</li>`).join("")}</${x.kind}>`)).join("");
 };
-const MARK = `<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect width="24" height="24" rx="6" fill="currentColor"/><path d="M7 17.5 12 6.5l5 11M8.9 13.5h6.2" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 const DATA_L = () => Object.fromEntries([...PERSONAL, ...OTHER, ["aucune", "Aucune donnée personnelle", "No personal data"]].map(([k, fr, en]) => [k, getLang() === "en" ? en : fr]));
 const CAT_L = (k) => (getLang() === "en" ? CAT_EN[k] : (CATEGORIES.find(([id]) => id === k) || [])[1]) || k;
 
