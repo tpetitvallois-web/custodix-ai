@@ -62,8 +62,10 @@ export const SCHEMA = {
   },
 };
 
+export const sujetsTexte = () => TOPICS.map((t) => `- ${t.id} : ${t.label}. ${GUIDE[t.id] || ""}`).join("\n");
+
 export function userPrompt(input) {
-  const subjects = TOPICS.map((t) => `- ${t.id} : ${t.label}. ${GUIDE[t.id] || ""}`).join("\n");
+  const subjects = sujetsTexte();
   return `Outil examiné : ${input.tool} (${input.vendor}). Cas d'usage envisagé par le client : ${input.useCase}
 
 Sujets à qualifier :

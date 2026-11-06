@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev --port 8775",
-    "deploy": "wrangler deploy",
+    "deploy": "wrangler deploy && node ../pont/redemarrer-pont.js",
     "pont": "node ../pont/pont.js",
     "lot": "node ../pont/lot.js"
   },

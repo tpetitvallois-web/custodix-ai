@@ -4,6 +4,12 @@ Custodix AI examine le contrat ou les conditions d'utilisation d'un outil d'IA, 
 
 En ligne : https://custodix-ai.gererseul-avis-worker.workers.dev (compte Cloudflare perso de Tom).
 
+## Trois façons d'entrer
+
+- **Conversation (accueil)** : barre de dialogue au centre d'un accueil sombre. L'utilisateur écrit, dépose un contrat (PDF, Word, texte), pose sa question. L'assistant du cabinet (`worker/chat.js`, prompt + schéma JSON, modèle jamais nommé) déduit du contrat le nom de l'outil, le fournisseur, l'usage, ne demande que ce qui manque, et quand le contrat est là rend sa lecture des douze sujets dans le même tour : le Worker vérifie les citations, calcule l'avis et l'ajoute à la conversation avec un lien vers le dossier. Conversations `CV-AAAA-NNNN` dans le Durable Object (messages, pièces en tranches, dossier déduit), file commune avec les dossiers (`suivant()` sert les deux), routes `/api/conversations`.
+- **Formulaire** (`#/analyse`) : saisie champ par champ, deux lectures au choix (ci-dessous).
+- **Connecteur MCP** (`/mcp`, page `#/connecteur`) : l'assistant de l'utilisateur (Claude, ChatGPT, tout client MCP) ouvre le dossier et lit lui-même ; quatre outils (`worker/mcp.js`), sans authentification pour la démonstration.
+
 ## Deux lectures du contrat
 
 - **Lecture par Claude** : le contrat est lu intégralement, dans sa langue, par claude-opus-5-5. Le modèle rend pour douze sujets un statut (protectrice, ambiguë, dangereuse, absent), la citation exacte et une note, plus des observations libres. Le Worker vérifie chaque citation mot pour mot dans le contrat (une citation introuvable ramène le sujet à « absent ») puis applique le barème. Prompt et schéma : `worker/lecture.js`.
@@ -41,7 +47,7 @@ npm install
 npm run dev          # http://localhost:8775 (config launch.json custodix-ai)
 npm run pont         # pont local vers claude -p (sinon l'agent launchd le fait déjà)
 npm run lot          # passe les contrats réels de ../contrats-reels dans le service
-npm run deploy
+npm run deploy      # wrangler deploy puis redémarrage du pont du Mac (l'objet durable garde l'ancien code tant qu'il est sollicité)
 ```
 
 En local, `wrangler dev` crée un registre vide et séparé ; le pont pointe sur l'URL de `CUSTODIX_URL`.

@@ -4,6 +4,8 @@ import { DurableObject } from "cloudflare:workers";
 import Anthropic from "@anthropic-ai/sdk";
 import { analyse } from "../public/engine.js";
 import { SYSTEM, SCHEMA, userPrompt, verifyReading, MODEL_API, MODEL_PONT } from "./lecture.js";
+import { handleMcp } from "./mcp.js";
+import { MODEL_CHAT, CHAT_SYSTEM, CHAT_SCHEMA, chatPrompt, mergeDossier, avisMessage } from "./chat.js";
 
 const MAX_CONTRACT = 600_000; // caractères, environ 150 000 jetons
 const PONT_TIMEOUT = 10 * 60 * 1000; // un dossier pris par le pont et sans réponse est remis en file
@@ -33,6 +35,8 @@ export class Registre extends DurableObject {
     if (mode === "regles") {
       d.resultat = analyse(input, { moteur: "règles v1" });
       d.statut = "termine";
+    } else if (mode === "connecteur") {
+      d.statut = "attente_lecture"; // l'assistant du client lit lui-même : jamais pris par le pont
     } else if (apiAvailable) {
       d.statut = "en_attente_api";
       await this.ctx.storage.setAlarm(Date.now() + 50);
@@ -79,6 +83,7 @@ export class Registre extends DurableObject {
     const m = await this.ctx.storage.list({ prefix: "dossier:" });
     let enAttente = 0;
     for (const d of m.values()) if (d.statut === "en_attente" || d.statut === "en_cours") enAttente++;
+    for (const c of (await this.ctx.storage.list({ prefix: "conv:" })).values()) if (c.statut === "en_attente" || c.statut === "en_cours") enAttente++;
     const vu = (await this.ctx.storage.get("pont:vu")) || 0;
     return { pont: { enLigne: Date.now() - vu < PONT_ONLINE, vu }, enAttente };
   }
@@ -86,15 +91,17 @@ export class Registre extends DurableObject {
   // Le pont local réclame le plus ancien dossier en attente (ou un dossier pris depuis trop longtemps).
   async suivant() {
     await this.ctx.storage.put("pont:vu", Date.now());
-    const m = await this.ctx.storage.list({ prefix: "dossier:" });
     const now = Date.now();
-    let pick = null;
-    for (const d of m.values()) {
-      const stale = d.statut === "en_cours" && now - d.maj > PONT_TIMEOUT;
-      if ((d.statut === "en_attente" || stale) && (!pick || d.cree < pick.cree)) pick = d;
-    }
+    let pick = null, pickAt = Infinity;
+    const consider = (x, at) => { const stale = x.statut === "en_cours" && now - x.maj > PONT_TIMEOUT; if ((x.statut === "en_attente" || stale) && at < pickAt) { pick = x; pickAt = at; } };
+    for (const d of (await this.ctx.storage.list({ prefix: "dossier:" })).values()) consider(d, d.cree);
+    for (const c of (await this.ctx.storage.list({ prefix: "conv:" })).values()) consider(c, c.demande || c.maj);
     if (!pick) return null;
     pick.statut = "en_cours"; pick.maj = now; pick.tentatives = (pick.tentatives || 0) + 1;
+    if (pick.id.startsWith("CV-")) {
+      await this.ctx.storage.put(`conv:${pick.id}`, pick);
+      return { id: pick.id, model: MODEL_CHAT, system: CHAT_SYSTEM, prompt: chatPrompt(pick, await this._pieces(pick)), schema: CHAT_SCHEMA, tentative: pick.tentatives };
+    }
     await this.ctx.storage.put(`dossier:${pick.id}`, pick);
     const contract = await this._contract(pick);
     return { id: pick.id, model: MODEL_PONT, system: SYSTEM, prompt: userPrompt({ ...pick.input, contract }), schema: SCHEMA, tentative: pick.tentatives };
@@ -123,6 +130,89 @@ export class Registre extends DurableObject {
     d.statut = definitif || (d.tentatives || 0) >= 2 ? "erreur" : "en_attente";
     await this.ctx.storage.put(`dossier:${id}`, d);
     return this.public(d);
+  }
+
+  // Conversations : l'utilisateur dialogue, dépose des pièces, l'assistant réclame ce qui manque puis lit.
+  async convCreer() {
+    const n = ((await this.ctx.storage.get("compteur_conv")) || 0) + 1;
+    await this.ctx.storage.put("compteur_conv", n);
+    const id = `CV-${new Date().getFullYear()}-${String(n).padStart(4, "0")}`;
+    const now = Date.now();
+    const c = { id, cree: now, maj: now, statut: "idle", messages: [], pieces: [], dossier: {}, dossierId: null, erreur: null, tentatives: 0 };
+    await this.ctx.storage.put(`conv:${id}`, c);
+    return this.convPublic(c);
+  }
+
+  async convLire(id) { const c = await this.ctx.storage.get(`conv:${id}`); return c ? this.convPublic(c) : null; }
+
+  async convMessage(id, text, pieces) {
+    const c = await this.ctx.storage.get(`conv:${id}`);
+    if (!c) return { error: "Conversation inconnue.", status: 404 };
+    if (c.statut === "en_attente" || c.statut === "en_cours") return { error: "Une réponse est en cours, attendez-la avant d'envoyer un autre message.", status: 409 };
+    const total = c.pieces.reduce((a, p) => a + p.chars, 0);
+    let budget = MAX_CONTRACT - total;
+    const added = [];
+    for (const p of pieces) {
+      const texte = p.texte.slice(0, Math.max(0, budget)); budget -= texte.length;
+      if (!texte.trim()) continue;
+      const n = c.pieces.length;
+      const chunks = []; for (let i = 0; i < texte.length; i += CHUNK) chunks.push(texte.slice(i, i + CHUNK));
+      for (let i = 0; i < chunks.length; i++) await this.ctx.storage.put(`piece:${id}:${n}:${i}`, chunks[i]);
+      const piece = { nom: p.nom, mots: texte.trim().split(/\s+/).filter(Boolean).length, chars: texte.length, tranches: chunks.length };
+      c.pieces.push(piece); added.push({ nom: piece.nom, mots: piece.mots });
+    }
+    if (!text && !added.length) return { error: "Message vide.", status: 400 };
+    c.messages.push({ role: "user", text: text || (added.length ? "Voici le document." : ""), at: Date.now(), pieces: added });
+    if (c.messages.length > 40) c.messages = c.messages.slice(-40);
+    c.statut = "en_attente"; c.tentatives = 0; c.erreur = null; c.maj = Date.now(); c.demande = Date.now();
+    await this.ctx.storage.put(`conv:${id}`, c);
+    return { conv: this.convPublic(c) };
+  }
+
+  async _pieces(c) {
+    const out = [];
+    for (let n = 0; n < c.pieces.length; n++) {
+      let texte = "";
+      for (let i = 0; i < c.pieces[n].tranches; i++) texte += (await this.ctx.storage.get(`piece:${c.id}:${n}:${i}`)) || "";
+      out.push({ ...c.pieces[n], texte });
+    }
+    return out;
+  }
+
+  // Réponse du modèle pour une conversation : message, dossier déduit, et lecture si tout est réuni.
+  async convResultat(id, res) {
+    const c = await this.ctx.storage.get(`conv:${id}`);
+    if (!c) return null;
+    const now = Date.now();
+    c.dossier = mergeDossier(c.dossier, res && res.dossier);
+    const message = String((res && res.message) || "").trim() || "Je n'ai pas pu formuler de réponse. Pouvez-vous reformuler ?";
+    c.messages.push({ role: "assistant", text: message, at: now });
+    const d = c.dossier;
+    if (res && res.pret && res.lecture && Array.isArray(res.lecture.clauses) && c.pieces.length && d.outil && d.fournisseur && d.cas_usage) {
+      const pieces = await this._pieces(c);
+      const contract = pieces.map((p) => `=== ${p.nom} ===\n${p.texte}`).join("\n\n");
+      const input = { tool: d.outil, vendor: d.fournisseur, category: d.categorie || "autre", useCase: d.cas_usage, dataTypes: d.donnees || [], countries: d.pays || "", users: d.utilisateurs || 0, contract, source: `Conversation ${c.id}, ${pieces.map((p) => p.nom).join(", ")}` };
+      const opened = await this.creer(input, "connecteur", false);
+      const done = await this.terminer(opened.id, res.lecture, "lecture intégrale v1 (conversation)", MODEL_CHAT);
+      c.dossierId = done.id;
+      c.messages.push({ role: "assistant", text: avisMessage(done), at: Date.now(), dossier: { id: done.id, verdict: done.resultat.verdict, score: done.resultat.score } });
+    }
+    c.statut = "idle"; c.erreur = null; c.maj = Date.now();
+    await this.ctx.storage.put(`conv:${id}`, c);
+    return this.convPublic(c);
+  }
+
+  async convEchouer(id, message) {
+    const c = await this.ctx.storage.get(`conv:${id}`);
+    if (!c) return null;
+    c.erreur = message; c.maj = Date.now();
+    c.statut = (c.tentatives || 0) >= 2 ? "erreur" : "en_attente";
+    await this.ctx.storage.put(`conv:${id}`, c);
+    return this.convPublic(c);
+  }
+
+  convPublic(c) {
+    return { id: c.id, statut: c.statut, erreur: c.erreur, dossier: c.dossier, dossierId: c.dossierId, pieces: c.pieces.map((p) => ({ nom: p.nom, mots: p.mots })), messages: c.messages, maj: c.maj };
   }
 
   // Lecture par l'API Anthropic, déclenchée par alarme pour ne pas dépendre de la durée de la requête HTTP.
@@ -260,6 +350,10 @@ const bearer = (request, env) => {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    if (url.pathname === "/mcp" || url.pathname === "/mcp/") {
+      const registre = env.REGISTRE.get(env.REGISTRE.idFromName("principal"));
+      return handleMcp(request, { registre, env, base: url.origin, cleanInput, declencherGitHub });
+    }
     if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(request);
     const registre = env.REGISTRE.get(env.REGISTRE.idFromName("principal"));
     const path = url.pathname.slice(4);
@@ -304,12 +398,34 @@ export default {
       }
       if (path === "/registre" && method === "GET") return ok({ ok: true, dossiers: await registre.liste() });
 
+      // Conversations.
+      if (path === "/conversations" && method === "POST") return ok({ ok: true, conversation: await registre.convCreer() });
+      if ((m = path.match(/^\/conversations\/(CV-[0-9-]+)$/)) && method === "GET") {
+        const c = await registre.convLire(m[1]);
+        return c ? ok({ ok: true, conversation: c }) : err("Conversation inconnue.", 404);
+      }
+      if ((m = path.match(/^\/conversations\/(CV-[0-9-]+)\/messages$/)) && method === "POST") {
+        const b = await json(); if (!b) return err("Corps JSON attendu.");
+        const text = String(b.text || "").replace(/\u0000/g, "").trim().slice(0, 6000);
+        const pieces = (Array.isArray(b.pieces) ? b.pieces : []).slice(0, 6).map((p) => ({ nom: String(p.nom || "document").slice(0, 120), texte: String(p.texte || "").replace(/\u0000/g, "").replace(/\r\n?/g, "\n").trim() })).filter((p) => p.texte);
+        const r = await registre.convMessage(m[1], text, pieces);
+        if (r.error) return err(r.error, r.status);
+        if (!env.ANTHROPIC_API_KEY) ctx.waitUntil(declencherGitHub(env, m[1]));
+        return ok({ ok: true, conversation: r.conv });
+      }
+
       // Pont local : réservé au jeton partagé.
       if (path.startsWith("/pont/")) {
         if (!bearer(request, env)) return err("Non autorisé.", 401);
         if (path === "/pont/suivant" && method === "GET") return ok({ ok: true, dossier: await registre.suivant() });
         if ((m = path.match(/^\/pont\/resultat\/([A-Z0-9-]+)$/)) && method === "POST") {
           const b = await json(); if (!b) return err("Corps JSON attendu.");
+          if (m[1].startsWith("CV-")) {
+            if (b.erreur) { const c = await registre.convEchouer(m[1], String(b.erreur).slice(0, 500)); return c ? ok({ ok: true, conversation: c }) : err("Conversation inconnue.", 404); }
+            if (!b.lecture || typeof b.lecture.message !== "string") return err("Réponse invalide.");
+            const c = await registre.convResultat(m[1], b.lecture);
+            return c ? ok({ ok: true, conversation: c }) : err("Conversation inconnue.", 404);
+          }
           if (b.erreur) { const d = await registre.echouer(m[1], String(b.erreur).slice(0, 500), !!b.definitif); return d ? ok({ ok: true, dossier: d }) : err("Dossier inconnu.", 404); }
           if (!b.lecture || !Array.isArray(b.lecture.clauses)) return err("Lecture invalide.");
           const origine = String(b.origine || "pont local").slice(0, 40);

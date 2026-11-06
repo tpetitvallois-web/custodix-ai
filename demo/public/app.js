@@ -24,6 +24,8 @@ const state = {
   showAvenant: false,
   errors: [],
   busy: false,
+  conv: null,
+  pendingPieces: [],
 };
 
 let stepTimers = [];
@@ -98,10 +100,13 @@ function route() {
   clearTimeout(pollTimer); pollTimer = null;
   const hash = location.hash || "#/";
   const id = (hash.split("/")[2] || "").toUpperCase();
+  document.body.classList.toggle("is-hero", hash === "#/" || hash === "#");
+  if (hash.startsWith("#/conversation")) return renderConversation(id);
   if (hash.startsWith("#/analyse")) return renderForm();
   if (hash.startsWith("#/en-cours")) return renderProgress(id);
   if (hash.startsWith("#/rapport")) return renderReport(id);
   if (hash.startsWith("#/registre")) return renderRegistre();
+  if (hash.startsWith("#/connecteur")) return renderConnecteur();
   return renderHome();
 }
 
@@ -109,29 +114,147 @@ function go(hash) { if (location.hash === hash) route(); else location.hash = ha
 
 window.addEventListener("hashchange", route);
 
-// Écran 1 : accueil.
+// Écran 1 : accueil, la barre de dialogue au centre.
+const ICON_CLIP = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5 12.5 20a5 5 0 0 1-7-7l8.5-8.5a3.5 3.5 0 0 1 5 5L10.5 18a2 2 0 0 1-3-3l8-8"/></svg>`;
+const ICON_SEND = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5m0 0-6 6m6-6 6 6"/></svg>`;
+
 function renderHome() {
   document.title = BRAND;
+  document.body.classList.add("is-hero");
   app.innerHTML = `
-    <section class="home">
-      <h1 class="h-display">${esc(BRAND)}</h1>
-      <p class="home__slogan">Chaque IA passe par Custodix.</p>
-      <p class="home__subtitle">Autorisation et gouvernance des outils d'intelligence artificielle en entreprise.</p>
-      <p class="home__intro">${esc(BRAND)} prépare, pour chaque outil d'IA, un avis d'autorisation documenté et validé par un avocat. Déposez un contrat ou des conditions d'utilisation, réels ou fictifs : ils sont lus intégralement dans leur langue, le barème du cabinet qualifie le risque.</p>
-      <div class="btn-row home__actions">
-        <a class="btn" href="#/analyse" data-action="new">Examiner un outil IA</a>
-        <a class="btn btn-secondary" href="#/registre">Registre des dossiers</a>
+    <section class="hero">
+      <div class="hero__ring hero__ring--a" aria-hidden="true"></div>
+      <div class="hero__ring hero__ring--b" aria-hidden="true"></div>
+      <div class="hero__inner">
+        <h1 class="hero__title">Chaque IA passe <em>par Custodix.</em></h1>
+        <p class="hero__sub">Autorisation et gouvernance des outils d'intelligence artificielle en entreprise.</p>
+        <form class="ask" id="ask-form" novalidate>
+          <label class="ask__attach" for="ask-file" title="Déposer un contrat (PDF, Word, texte)">${ICON_CLIP}<span class="sr-only">Déposer un document</span></label>
+          <input type="file" id="ask-file" multiple accept=".pdf,.docx,.txt,.md,application/pdf,text/plain,text/markdown,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+          <input type="text" class="ask__input" id="ask-input" placeholder="Décrivez l'outil, déposez son contrat, posez votre question." autocomplete="off">
+          <button type="submit" class="ask__send" aria-label="Envoyer">${ICON_SEND}</button>
+        </form>
+        <div class="ask__pieces" id="ask-pieces"></div>
+        <p class="hero__hint">Un avis d'autorisation documenté, préparé pour être validé par un avocat. L'assistant ne demande que ce qui manque.</p>
+        <nav class="pillnav" aria-label="Accès rapides">
+          <a href="#/analyse">Formulaire</a>
+          <a href="#/registre">Registre</a>
+          <a href="#/connecteur">Connecter votre assistant</a>
+          <span class="pillnav__sep" aria-hidden="true"></span>
+          <span class="pillnav__label">Exemples</span>
+          ${SCENARIOS.map((x) => `<button type="button" data-load="${esc(x.id)}">${esc(x.tool)}</button>`).join("")}
+        </nav>
       </div>
-      <p class="home__note">Un service conçu pour les directions juridiques, conformité, achats et IT.</p>
-      <p class="home__shortcuts">Exemples :
-        ${SCENARIOS.map((s) => `<button type="button" class="btn-text" data-load="${esc(s.id)}">${esc(s.tool)}</button>`).join("")}
-      </p>
-      <p class="home__etat" id="home-etat"></p>
     </section>`;
-  app.querySelector("[data-action=new]").addEventListener("click", () => { state.form = emptyForm(); state.errors = []; });
-  app.querySelectorAll("[data-load]").forEach((b) => b.addEventListener("click", () => { loadScenario(b.dataset.load); go("#/analyse"); }));
-  refreshEtat().then((e) => { const el = app.querySelector("#home-etat"); if (el) el.textContent = etatLine(e); });
+  const input = app.querySelector("#ask-input");
+  const piecesEl = app.querySelector("#ask-pieces");
+  const paintPieces = () => { piecesEl.innerHTML = state.pendingPieces.map((p, i) => `<span class="chip">${esc(p.nom)}, ${fmtInt(countWords(p.texte))} mots <button type="button" data-rm="${i}" aria-label="Retirer">×</button></span>`).join(""); piecesEl.querySelectorAll("[data-rm]").forEach((b) => b.addEventListener("click", () => { state.pendingPieces.splice(Number(b.dataset.rm), 1); paintPieces(); })); };
+  paintPieces();
+  app.querySelector("#ask-file").addEventListener("change", async (e) => { await addPieces(e.target.files); e.target.value = ""; paintPieces(); input.focus(); });
+  app.querySelector("#ask-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const text = input.value.trim();
+    if (!text && !state.pendingPieces.length) { input.focus(); return; }
+    await startConversation(text, state.pendingPieces.splice(0));
+  });
+  app.querySelectorAll("[data-load]").forEach((b) => b.addEventListener("click", () => {
+    const x = SCENARIOS.find((y) => y.id === b.dataset.load); if (!x) return;
+    const text = `Nous voulons utiliser ${x.tool} (${x.vendor}) pour cet usage : ${x.useCase} Données : ${dataSummary(x.dataTypes)}. Pays : ${x.countries}. ${fmtInt(x.users)} utilisateurs. Est-ce que nous pouvons l'autoriser ?`;
+    startConversation(text, [{ nom: `contrat-${slug(x.tool)}.md`, texte: x.contract }]);
+  }));
+  input.focus();
   window.scrollTo(0, 0);
+}
+
+async function addPieces(files) {
+  for (const file of [...(files || [])].slice(0, 6)) {
+    try { toast(`Lecture de ${file.name}`); const texte = await readFile(file); if (countWords(texte) < 20) { toast(`${file.name} : presque aucun texte lisible`); continue; } state.pendingPieces.push({ nom: file.name, texte }); }
+    catch (err) { toast(err.message || "Fichier illisible"); }
+  }
+}
+
+// Ouvre une conversation sur le serveur et envoie le premier message.
+async function startConversation(text, pieces) {
+  const btn = app.querySelector(".ask__send, #chat-send");
+  if (btn) btn.disabled = true;
+  try {
+    const { conversation } = await api("/conversations", {});
+    const r = await api(`/conversations/${conversation.id}/messages`, { text, pieces });
+    state.conv = r.conversation;
+    go(`#/conversation/${conversation.id}`);
+  } catch (err) { toast(err.message); if (btn) btn.disabled = false; }
+}
+
+// Écran 7 : conversation.
+async function renderConversation(id) {
+  if (!id) { go("#/"); return; }
+  document.title = `Conversation ${id}, ${BRAND}`;
+  if (!state.conv || state.conv.id !== id) {
+    try { state.conv = (await api(`/conversations/${id}`)).conversation; }
+    catch (err) { app.innerHTML = `<section class="chat"><h1 class="h-page">Conversation introuvable</h1><p class="muted">${esc(err.message)}</p><p><a class="btn" href="#/">Accueil</a></p></section>`; return; }
+  }
+  app.innerHTML = `
+    <section class="chat">
+      <div class="chat__head">
+        <div><div class="chat__kicker">Conversation ${esc(id)}</div><h1 class="h-section chat__title" id="chat-title"></h1></div>
+        <a class="btn-text" href="#/">Nouvelle conversation</a>
+      </div>
+      <div class="chat__list" id="chat-list" aria-live="polite"></div>
+      <form class="composer" id="chat-form" novalidate>
+        <div class="composer__pieces" id="chat-pieces"></div>
+        <div class="composer__row">
+          <label class="composer__attach" for="chat-file" title="Déposer un document">${ICON_CLIP}<span class="sr-only">Déposer un document</span></label>
+          <input type="file" id="chat-file" multiple accept=".pdf,.docx,.txt,.md,application/pdf,text/plain,text/markdown,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+          <textarea class="composer__input" id="chat-input" rows="1" placeholder="Répondez, posez une question, ou déposez un document."></textarea>
+          <button type="submit" class="composer__send" id="chat-send" aria-label="Envoyer">${ICON_SEND}</button>
+        </div>
+      </form>
+    </section>`;
+  const list = app.querySelector("#chat-list");
+  const input = app.querySelector("#chat-input");
+  const piecesEl = app.querySelector("#chat-pieces");
+  const started = { at: Date.now() };
+  const paintPieces = () => { piecesEl.innerHTML = state.pendingPieces.map((p, i) => `<span class="chip">${esc(p.nom)}, ${fmtInt(countWords(p.texte))} mots <button type="button" data-rm="${i}" aria-label="Retirer">×</button></span>`).join(""); piecesEl.querySelectorAll("[data-rm]").forEach((b) => b.addEventListener("click", () => { state.pendingPieces.splice(Number(b.dataset.rm), 1); paintPieces(); })); };
+  const paint = () => {
+    const c = state.conv;
+    app.querySelector("#chat-title").textContent = c.dossier && c.dossier.outil ? `${c.dossier.outil}${c.dossier.fournisseur ? `, ${c.dossier.fournisseur}` : ""}` : "Examen d'un outil IA";
+    const waiting = c.statut === "en_attente" || c.statut === "en_cours";
+    list.innerHTML = c.messages.map((m) => `
+      <div class="msg msg--${m.role === "user" ? "user" : "assistant"}">
+        <div class="msg__text">${esc(m.text)}</div>
+        ${m.pieces && m.pieces.length ? `<div class="msg__pieces">${m.pieces.map((p) => `<span class="chip chip--light">${esc(p.nom)}, ${fmtInt(p.mots)} mots</span>`).join("")}</div>` : ""}
+        ${m.dossier ? `<a class="dossier-card" href="#/rapport/${esc(m.dossier.id)}"><span class="avis__dot avis__dot--${esc(m.dossier.verdict)} avis__dot--small" aria-hidden="true"></span><span class="dossier-card__label">${esc(AVIS_LABEL[m.dossier.verdict])}</span><span class="dossier-card__score">${m.dossier.score} / 100</span><span class="dossier-card__open">Ouvrir le dossier ${esc(m.dossier.id)}</span></a>` : ""}
+      </div>`).join("") + (waiting ? `<div class="msg msg--assistant msg--wait"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="msg__wait" id="chat-wait">${c.pieces.length ? "Lecture en cours" : "Réponse en cours"}</span></div>` : "") + (c.statut === "erreur" ? `<div class="msg msg--assistant"><div class="msg__text">La réponse a échoué : ${esc(c.erreur || "erreur inconnue")}. Renvoyez votre message.</div></div>` : "");
+    app.querySelector("#chat-send").disabled = waiting;
+    input.disabled = waiting;
+    list.lastElementChild?.scrollIntoView({ block: "end" });
+  };
+  paint(); paintPieces();
+  const grow = () => { input.style.height = "auto"; input.style.height = `${Math.min(160, input.scrollHeight)}px`; };
+  input.addEventListener("input", grow);
+  input.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); app.querySelector("#chat-form").requestSubmit(); } });
+  app.querySelector("#chat-file").addEventListener("change", async (e) => { await addPieces(e.target.files); e.target.value = ""; paintPieces(); input.focus(); });
+  app.querySelector("#chat-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const text = input.value.trim();
+    if (!text && !state.pendingPieces.length) return;
+    const pieces = state.pendingPieces.splice(0);
+    input.value = ""; grow(); paintPieces();
+    try { state.conv = (await api(`/conversations/${id}/messages`, { text, pieces })).conversation; started.at = Date.now(); paint(); poll(); }
+    catch (err) { toast(err.message); state.pendingPieces.unshift(...pieces); input.value = text; paintPieces(); }
+  });
+  const poll = async () => {
+    clearTimeout(pollTimer);
+    const c = state.conv;
+    if (!(c.statut === "en_attente" || c.statut === "en_cours")) { input.focus(); return; }
+    const w = app.querySelector("#chat-wait");
+    if (w) { const sec = Math.round((Date.now() - started.at) / 1000); w.textContent = `${c.pieces.length ? "Lecture en cours" : "Réponse en cours"}, ${sec} s`; }
+    try { const r = await api(`/conversations/${id}`); if (r.conversation.maj !== state.conv.maj || r.conversation.statut !== state.conv.statut) { state.conv = r.conversation; paint(); } }
+    catch { /* on réessaie */ }
+    pollTimer = setTimeout(poll, 2000);
+  };
+  poll();
+  if (!(state.conv.statut === "en_attente" || state.conv.statut === "en_cours")) input.focus();
 }
 
 function etatLine(e) {
@@ -495,6 +618,7 @@ async function renderProgress(id) {
     } catch (err) { wait.textContent = `Connexion au service perdue : ${err.message}`; }
     if (d.statut === "termine") { finish(); items[0].querySelector(".step__detail").textContent = ""; play(d); return; }
     if (d.statut === "erreur") { showError(`La lecture intégrale a échoué : ${d.erreur || "erreur inconnue"}.`); return; }
+    if (d.statut === "attente_lecture") { wait.textContent = "Ce dossier a été ouvert par un assistant connecté : il attend sa lecture. La page se mettra à jour dès réception."; }
     if (d.statut === "en_cours" || d.statut === "en_cours_api") { items[0].classList.add("is-done"); items[0].classList.remove("is-active"); items[1].classList.add("is-active"); }
     pollTimer = setTimeout(tick, POLL_MS);
   };
@@ -776,6 +900,45 @@ function bindValidation(d) {
   });
 }
 
+// Écran 6 : connecter son assistant (serveur MCP).
+function renderConnecteur() {
+  document.title = `Connecter votre assistant, ${BRAND}`;
+  const url = `${location.origin}/mcp`;
+  app.innerHTML = `
+    <section class="connecteur">
+      <div class="page-head">
+        <h1 class="h-page">Connecter votre assistant</h1>
+        <p class="muted">${esc(BRAND)} expose un serveur MCP. Votre assistant, Claude, ChatGPT ou un autre client compatible, peut ouvrir un dossier, lire le contrat et recevoir l'avis, sans quitter la conversation.</p>
+      </div>
+      <div class="connecteur__url">
+        <span class="label">Adresse du serveur</span>
+        <code id="mcp-url">${esc(url)}</code>
+        <button type="button" class="btn btn-secondary" data-action="copy-url">Copier</button>
+      </div>
+      <div class="connecteur__grid">
+        <div>
+          <h2 class="h-section">Comment ça marche</h2>
+          <p>Vous collez le contrat dans votre assistant et vous lui demandez un avis Custodix. Il ouvre le dossier, lit le contrat selon le guide de lecture du cabinet, et renvoie pour douze sujets le statut de la clause, la citation exacte et une note.</p>
+          <p>${esc(BRAND)} vérifie chaque citation mot pour mot dans le contrat, calcule le niveau de vigilance, les points bloquants, les obligations et l'avenant, et inscrit le dossier au registre. Votre assistant lit, le code du cabinet décide.</p>
+          <p class="muted small">Quatre outils sont exposés : examiner_outil, deposer_lecture, consulter_dossier, registre. Démonstration sans authentification : les dossiers sont visibles dans le registre, ne transmettez pas de contrat confidentiel.</p>
+        </div>
+        <div>
+          <h2 class="h-section">Brancher</h2>
+          <div class="pair-list">
+            <div class="pair"><div class="pair__subject">Claude</div><div>Réglages, Connecteurs, « Ajouter un connecteur personnalisé », collez l'adresse, sans authentification. Puis dans une conversation : « Examine ce contrat avec Custodix AI » suivi du texte.</div></div>
+            <div class="pair"><div class="pair__subject">ChatGPT</div><div>Réglages, Connecteurs, mode développeur, « Créer », collez l'adresse. Activez le connecteur dans la conversation avant de demander l'examen.</div></div>
+            <div class="pair"><div class="pair__subject">Claude Code et autres clients</div><div>Ajoutez un serveur MCP distant de type HTTP avec cette adresse.</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="btn-row"><a class="btn" href="#/analyse">Examiner depuis le site</a><a class="btn-text" href="#/">Accueil</a></div>
+    </section>`;
+  app.querySelector("[data-action=copy-url]").addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(url); toast("Adresse copiée"); } catch { toast(url); }
+  });
+  window.scrollTo(0, 0);
+}
+
 // Écran 5 : registre des dossiers.
 async function renderRegistre() {
   document.title = `Registre des dossiers, ${BRAND}`;
@@ -793,7 +956,7 @@ async function renderRegistre() {
   try {
     const { dossiers } = await api("/registre");
     if (!dossiers.length) { body.innerHTML = `<p class="muted">Aucun dossier pour le moment.</p>`; return; }
-    const statut = (x) => x.statut === "termine" ? (x.verdict ? AVIS_LABEL[x.verdict] : "") : x.statut === "erreur" ? "Lecture échouée" : "En cours";
+    const statut = (x) => x.statut === "termine" ? (x.verdict ? AVIS_LABEL[x.verdict] : "") : x.statut === "erreur" ? "Lecture échouée" : x.statut === "attente_lecture" ? "Attend l'assistant" : "En cours";
     body.innerHTML = `
       <table class="table">
         <thead><tr><th>Dossier</th><th>Date</th><th>Outil</th><th>Fournisseur</th><th>Avis</th><th>Niveau</th><th>Lecture</th><th>Validation</th></tr></thead>
