@@ -84,7 +84,7 @@ async function boucle() {
       try {
         const { lecture, modele, duree } = await lire(dossier);
         const n = (lecture.clauses || []).length;
-        await api(`/api/pont/resultat/${dossier.id}`, { method: "POST", body: JSON.stringify({ lecture, modele }) });
+        await api(`/api/pont/resultat/${dossier.id}`, { method: "POST", body: JSON.stringify({ lecture, modele, origine: process.env.GITHUB_ACTIONS ? "GitHub Actions" : "pont local" }) });
         log(`dossier ${dossier.id} : ${n} sujets lus en ${Math.round((duree || Date.now() - t0) / 1000)} s`);
       } catch (e) {
         log(`dossier ${dossier.id} : échec, ${e.message}`);

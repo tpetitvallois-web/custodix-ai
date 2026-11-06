@@ -308,7 +308,8 @@ export default {
           const b = await json(); if (!b) return err("Corps JSON attendu.");
           if (b.erreur) { const d = await registre.echouer(m[1], String(b.erreur).slice(0, 500), !!b.definitif); return d ? ok({ ok: true, dossier: d }) : err("Dossier inconnu.", 404); }
           if (!b.lecture || !Array.isArray(b.lecture.clauses)) return err("Lecture invalide.");
-          const d = await registre.terminer(m[1], b.lecture, `${b.modele || "claude"} (pont local)`);
+          const origine = String(b.origine || "pont local").slice(0, 40);
+          const d = await registre.terminer(m[1], b.lecture, `${b.modele || "claude"} (${origine})`);
           return d ? ok({ ok: true, dossier: d }) : err("Dossier inconnu.", 404);
         }
       }
