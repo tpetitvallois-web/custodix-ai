@@ -1,7 +1,7 @@
 // Site public d'Aucteva : accueil, démonstration, pages légales, page introuvable.
 import { t, getLang, setLang } from "./i18n.js";
-import { api, esc, fmtInt, fmtDay, ICON, LOGO, avisPill, decisionPill, dimensionsOf, statusKey, CLAUSE, clausePill, slug, countWords, toast, go, rerender } from "./ui.js";
-import { analyse } from "./engine.js";
+import { api, esc, fmtInt, fmtDay, ICON, LOGO, copy, avisPill, decisionPill, dimensionsOf, statusKey, CLAUSE, clausePill, slug, countWords, toast, go, rerender } from "./ui.js";
+import { analyse, avenant } from "./engine.js";
 import { SCENARIOS } from "./scenarios.js";
 import { fold, locate, renderDoc, scrollWithin } from "./doc.js";
 import { askBar, startConversation, EXAMPLES } from "./ask.js";
@@ -59,6 +59,9 @@ function mountMock(el, scnId, { flat = false } = {}) {
           <div class="mock__score"><div><div class="small muted">${t("ws.vigilance")}</div><div class="val">${r.score}<span class="small muted"> / 100</span></div></div><div class="small muted" style="text-align:right">${t("ws.prepared")}</div></div>
           ${dims.map((d, i) => `<button type="button" class="dimrow" data-dim="${d.id}" aria-pressed="${d.id === first.id}"><span class="n">${i + 1}</span><span class="lbl">${esc(t(`dim.${d.id}`))}</span>${clausePill(d.status)}</button>`).join("")}
           <p class="small muted" id="mock-note" style="margin:10px 6px 0;min-height:20px"></p>
+          <div class="mock__cta">${r.clauses_correctives.length
+            ? `<button type="button" class="btn btn--sm" data-amend>${ICON.doc}${t("pv.amend")}</button><span class="small muted">${r.clauses_correctives.length} ${t("pv.amend.n")}</span>`
+            : `<span class="small muted">${t("pv.amend.none")}</span>`}</div>
         </div>
       </div>
     </div>`;
@@ -76,7 +79,40 @@ function mountMock(el, scnId, { flat = false } = {}) {
     } else note.textContent = t("pv.nocite");
   };
   el.querySelectorAll(".dimrow").forEach((b) => b.addEventListener("click", () => show(b.dataset.dim)));
+  el.querySelector("[data-amend]")?.addEventListener("click", () => {
+    const cur = el.querySelector('.dimrow[aria-pressed="true"]')?.dataset.dim;
+    openAmendment(s, r, new Set((dims.find((d) => d.id === cur)?.items || []).map((c) => c.sujet)));
+  });
   requestAnimationFrame(() => show(first.id));
+}
+
+// Projet d'avenant calculé par le moteur sur le scénario : un article par clause à corriger.
+// L'article du domaine sélectionné est mis en avant.
+function openAmendment(s, r, focus) {
+  const text = avenant(r);
+  const html = text.split("\n").map((l) => {
+    if (/^AVENANT/.test(l)) return `<h3>${esc(l)}</h3>`;
+    const m = l.match(/^Article \d+\. (.+)$/);
+    if (m) return `</section><section class="amd__art${focus.has(m[1]) ? " is-focus" : ""}"><h4>${esc(l)}</h4>`;
+    if (l === "Préambule") return `<h4>${esc(l)}</h4>`;
+    return l ? `<p>${esc(l)}</p>` : "";
+  }).join("");
+  const dlg = document.createElement("dialog");
+  dlg.className = "amd";
+  dlg.innerHTML = `
+    <div class="amd__head"><div><div class="small muted">${t("pv.amend.title")}</div><strong>${esc(s.tool)}, ${esc(s.vendor)}</strong></div><button type="button" class="iconbtn" data-x aria-label="${esc(t("common.close"))}">${ICON.x}</button></div>
+    <div class="amd__body"><section>${html}</section></div>
+    <div class="amd__foot"><span class="small muted">${t("pv.amend.note")}</span><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn--secondary btn--sm" data-copy>${t("common.copy")}</button><button type="button" class="btn btn--secondary btn--sm" data-dl>${t("common.download")} .txt</button><a class="btn btn--sm" href="/cas-usage">${t("pv.amend.more")}</a></div></div>`;
+  document.body.appendChild(dlg);
+  const close = () => { dlg.close(); dlg.remove(); };
+  dlg.querySelector("[data-x]").addEventListener("click", close);
+  dlg.addEventListener("click", (e) => { if (e.target === dlg) close(); });
+  dlg.addEventListener("cancel", (e) => { e.preventDefault(); close(); });
+  dlg.querySelector("a").addEventListener("click", () => close());
+  dlg.querySelector("[data-copy]").addEventListener("click", () => copy(text));
+  dlg.querySelector("[data-dl]").addEventListener("click", () => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" })); a.download = `avenant-${slug(s.tool)}.txt`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); });
+  dlg.showModal();
+  requestAnimationFrame(() => dlg.querySelector(".is-focus")?.scrollIntoView({ block: "start" }));
 }
 
 // Blocs partagés par l'accueil et les sous-pages.

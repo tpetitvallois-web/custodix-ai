@@ -661,3 +661,19 @@ p { margin: 0 0 12px; }
 }
 @media (hover: none) { .ask__tab { display: none; } }
 @media (max-width: 600px) { .ask__input { min-height: 92px; scrollbar-width: none; } .ask__row { align-items: flex-start; } .ask__icon, .ask__send { margin-top: 2px; } }
+
+/* Aperçu : bouton et fenêtre du projet d'avenant */
+.mock__cta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: auto 6px 4px; padding-top: 14px; border-top: 1px solid var(--line); }
+.mock__cta .btn svg { width: 16px; height: 16px; }
+.amd { width: min(760px, calc(100vw - 32px)); max-height: min(86vh, 900px); padding: 0; border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: 0 30px 80px -20px rgba(11, 20, 38, .45); color: var(--ink); display: flex; flex-direction: column; }
+.amd:not([open]) { display: none; }
+.amd::backdrop { background: rgba(11, 20, 38, .55); }
+.amd__head { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--line); background: var(--off); }
+.amd__body { overflow: auto; padding: 8px 28px 24px; font-family: var(--serif); font-size: 15px; line-height: 1.65; color: var(--ink-2); }
+.amd__body h3 { font-family: var(--sans); font-size: 16px; letter-spacing: 0; margin: 18px 0 8px; color: var(--ink); }
+.amd__body h4 { font-family: var(--sans); font-size: 14px; font-weight: 600; margin: 18px 0 4px; color: var(--ink); }
+.amd__body p { margin: 0 0 8px; }
+.amd__art.is-focus { background: var(--review-bg); border-left: 3px solid var(--blue); margin: 10px -14px; padding: 2px 14px 6px 11px; border-radius: 0 6px 6px 0; scroll-margin-top: 12px; }
+.amd__foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 20px; border-top: 1px solid var(--line); }
+.amd__foot > span { max-width: 380px; }
+@media (max-width: 600px) { .amd__body { padding: 4px 18px 18px; } }
