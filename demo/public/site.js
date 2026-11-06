@@ -4,17 +4,18 @@ import { api, esc, fmtInt, fmtDay, ICON, LOGO, avisPill, decisionPill, dimension
 import { analyse } from "./engine.js";
 import { SCENARIOS } from "./scenarios.js";
 import { fold, locate, renderDoc, scrollWithin } from "./doc.js";
+import { askBar, startConversation, EXAMPLES } from "./ask.js";
 
 const DIM_IDS = ["training", "retention", "transfer", "subprocessors", "security", "liability", "oversight", "transparency"];
 
-export function siteLayout(root, inner) {
+export function siteLayout(root, inner, active = "") {
   root.innerHTML = `
     <a class="skip" href="#contenu">${getLang() === "en" ? "Skip to content" : "Aller au contenu"}</a>
     <header class="sitebar" id="sitebar">
       <div class="wrap sitebar__in">
         <a class="home" href="#/" aria-label="Aucteva, accueil">${LOGO}</a>
         <nav class="sitenav" aria-label="${getLang() === "en" ? "Main" : "Principale"}">
-          <a href="#/produit">${t("nav.product")}</a><a href="#/fonctionnement">${t("nav.how")}</a><a href="#/cas-usage">${t("nav.cases")}</a><a href="#/securite">${t("nav.security")}</a>
+          ${PAGES.map(([k, l]) => `<a href="#/${k}"${k === active ? ' aria-current="page"' : ""}>${t(l)}</a>`).join("")}
         </nav>
         <div class="sitebar__actions">
           <button type="button" class="langbtn" data-lang aria-label="${t("lang.switch")}">${t("lang.code")}</button>
@@ -78,131 +79,201 @@ function mountMock(el, scnId, { flat = false } = {}) {
   requestAnimationFrame(() => show(first.id));
 }
 
-export function renderLanding(root, anchor) {
-  document.title = getLang() === "en" ? "Aucteva, legal governance for AI tools" : "Aucteva, gouvernance juridique des outils d'IA";
-  const SC = { marketing: getLang() === "en" ? "Marketing content" : "Contenus marketing", support: getLang() === "en" ? "Customer support" : "Support client", recruiter: getLang() === "en" ? "Candidate screening" : "Présélection de candidats" };
-  siteLayout(root, `
-    <section class="hero" id="produit">
-      <div class="wrap">
-        <div class="hero__copy">
-          <div class="hero__line" aria-hidden="true"></div>
-          <h1>${t("hero.title")}</h1>
-          <p class="hero__sub">${t("hero.sub")}</p>
-          <div class="hero__ctas"><a class="btn btn--light btn--lg" href="#/demo">${t("hero.cta1")}</a><a class="btn btn--outline-light btn--lg" href="#/fonctionnement">${t("hero.cta2")}</a></div>
-        </div>
-        <div class="hero__shot" id="hero-mock"></div>
-        <p class="hero__caption">${t("hero.caption")}</p>
-      </div>
-    </section>
+// Blocs partagés par l'accueil et les sous-pages.
+const en = () => getLang() === "en";
+const SC_LABEL = () => ({ marketing: en() ? "Marketing content" : "Contenus marketing", support: en() ? "Customer support" : "Support client", recruiter: en() ? "Candidate screening" : "Présélection de candidats" });
+const PAGES = [["produit", "nav.product", "more.product"], ["fonctionnement", "nav.how", "more.how"], ["cas-usage", "nav.cases", "more.cases"], ["securite", "nav.security", "more.security"]];
 
-    <section class="sec">
-      <div class="wrap">
-        <div class="kicker">${t("pb.kicker")}</div>
-        <h2>${t("pb.title")}</h2>
-        <p class="sec__lead">${t("pb.body")}</p>
-        <div class="cols3">
-          <div><h3>${t("pb.a.t")}</h3><p>${t("pb.a.d")}</p></div>
-          <div><h3>${t("pb.b.t")}</h3><p>${t("pb.b.d")}</p></div>
-          <div><h3>${t("pb.c.t")}</h3><p>${t("pb.c.d")}</p></div>
-        </div>
-      </div>
-    </section>
+const pageHero = (kicker, title, lead) => `
+  <section class="phero"><div class="wrap"><div class="hero__line" aria-hidden="true"></div><div class="kicker">${kicker}</div><h1>${title}</h1><p class="phero__lead">${lead}</p></div></section>`;
 
-    <section class="sec sec--tint" id="fonctionnement">
-      <div class="wrap">
-        <div class="kicker">${t("how.kicker")}</div>
-        <h2>${t("how.title")}</h2>
-        <div class="steps4">
-          ${[1, 2, 3, 4].map((i) => `<div><span class="n">${i}</span><h3>${t(`how.${i}.t`)}</h3><p>${t(`how.${i}.d`)}</p></div>`).join("")}
-        </div>
-      </div>
-    </section>
+const secProblem = () => `
+  <section class="sec"><div class="wrap">
+    <div class="kicker">${t("pb.kicker")}</div><h2>${t("pb.title")}</h2><p class="sec__lead">${t("pb.body")}</p>
+    <div class="cols3">${["a", "b", "c"].map((k) => `<div><h3>${t(`pb.${k}.t`)}</h3><p>${t(`pb.${k}.d`)}</p></div>`).join("")}</div>
+  </div></section>`;
 
-    <section class="sec" id="cas-usage">
-      <div class="wrap">
-        <div class="kicker">${t("pv.kicker")}</div>
-        <h2>${t("pv.title")}</h2>
-        <p class="sec__lead">${t("pv.body")}</p>
-        <div class="tabs" role="tablist" style="margin:32px 0 16px">
-          ${SCENARIOS.map((s, i) => `<button type="button" role="tab" aria-selected="${i === 1}" data-scn="${s.id}">${esc(SC[s.id])} · ${esc(s.tool)}</button>`).join("")}
-        </div>
-        <div id="pv-mock"></div>
-        <p style="margin-top:16px"><a class="btn btn--secondary" href="#/demo">${t("pv.open")}</a></p>
-      </div>
-    </section>
+const secHow = () => `
+  <section class="sec sec--tint"><div class="wrap">
+    <div class="kicker">${t("how.kicker")}</div><h2>${t("how.title")}</h2>
+    <div class="steps4">${[1, 2, 3, 4].map((i) => `<div><span class="n">${i}</span><h3>${t(`how.${i}.t`)}</h3><p>${t(`how.${i}.d`)}</p></div>`).join("")}</div>
+  </div></section>`;
 
-    <section class="sec sec--tint">
-      <div class="wrap">
-        <div class="kicker">${t("dim.kicker")}</div>
-        <h2>${t("dim.title")}</h2>
-        <div class="dims8">${DIM_IDS.map((d, i) => `<div><span class="n">${i + 1}</span><h3>${t(`dim.${d}`)}</h3><p>${t(`dim.${d}.d`)}</p></div>`).join("")}</div>
-        <p class="note">${t("dim.note")}</p>
-      </div>
-    </section>
+const secWays = (tint = false) => `
+  <section class="sec${tint ? " sec--tint" : ""}"><div class="wrap">
+    <div class="kicker">${t("ways.kicker")}</div><h2>${t("ways.title")}</h2>
+    <div class="ways">
+      <a class="way way--main" href="#/app/nouveau"><span class="way__tag">${t("way.reco")}</span><span class="way__ic">${ICON.chat}</span><h3>${t("way.chat.t")}</h3><p>${t("way.chat.d")}</p><span class="way__go">${t("way.chat.cta")}${ICON.arrow}</span></a>
+      <a class="way" href="#/app/connecteur"><span class="way__ic">${ICON.plug}</span><h3>${t("way.mcp.t")}</h3><p>${t("way.mcp.d")}</p><span class="way__go">${t("way.mcp.cta")}${ICON.arrow}</span></a>
+      <a class="way" href="#/app/nouveau/formulaire"><span class="way__ic">${ICON.files}</span><h3>${t("way.form.t")}</h3><p>${t("way.form.d")}</p><span class="way__go">${t("way.form.cta")}${ICON.arrow}</span></a>
+    </div>
+  </div></section>`;
 
-    <section class="sec sec--navy">
-      <div class="wrap">
-        <div class="kicker">${t("roles.kicker")}</div>
-        <h2>${t("roles.title")}</h2>
-        <div class="roles3">
-          <div><div class="who">IA</div><h3>${t("roles.ai.t")}</h3><p>${t("roles.ai.d")}</p></div>
-          <div><div class="who">${getLang() === "en" ? "Lawyer" : "Avocat"}</div><h3>${t("roles.law.t")}</h3><p>${t("roles.law.d")}</p></div>
-          <div><div class="who">${getLang() === "en" ? "Company" : "Entreprise"}</div><h3>${t("roles.co.t")}</h3><p>${t("roles.co.d")}</p></div>
-        </div>
-      </div>
-    </section>
+const secPreview = (tabs = true) => `
+  <section class="sec"><div class="wrap">
+    <div class="kicker">${t("pv.kicker")}</div><h2>${t("pv.title")}</h2><p class="sec__lead">${t("pv.body")}</p>
+    ${tabs ? `<div class="tabs" role="tablist" style="margin:32px 0 16px">${SCENARIOS.map((s, i) => `<button type="button" role="tab" aria-selected="${i === 1}" data-scn="${s.id}">${esc(SC_LABEL()[s.id])} · ${esc(s.tool)}</button>`).join("")}</div>` : `<div style="height:32px"></div>`}
+    <div id="pv-mock"></div>
+    <p style="margin-top:16px"><a class="btn btn--secondary" href="#/demo">${t("pv.open")}</a></p>
+  </div></section>`;
 
-    <section class="sec">
-      <div class="wrap split">
-        <div>
-          <div class="kicker">${t("reg.kicker")}</div>
-          <h2>${t("reg.title")}</h2>
-          <p class="sec__lead">${t("reg.body")}</p>
-          <p style="margin-top:24px"><a class="btn btn--secondary" href="#/app/registre">${t("reg.open")}</a></p>
-        </div>
-        <div>
-          <div id="reg-mini"><span class="sk" style="height:180px"></span></div>
-          <p class="note">${t("reg.live")}</p>
-        </div>
-      </div>
-    </section>
-
-    <section class="sec sec--tint" id="securite">
-      <div class="wrap">
-        <div class="kicker">${t("sec.kicker")}</div>
-        <h2>${t("sec.title")}</h2>
-        <div class="sec5">
-          ${[1, 2, 3, 4, 5].map((i) => `<div><h3>${i === 5 ? `${ICON.lock}` : ""}${t(`sec.${i}.t`)}</h3><p>${t(`sec.${i}.d`)}</p></div>`).join("")}
-        </div>
-      </div>
-    </section>
-
-    <section class="sec sec--navy">
-      <div class="wrap">
-        <div class="kicker">${t("cta.kicker")}</div>
-        <h2>${t("cta.title")}</h2>
-        <p class="sec__lead">${t("cta.body")}</p>
-        <div class="cta-band"><a class="btn btn--light btn--lg" href="#/demo">${t("cta.demo")}</a><a class="btn btn--outline-light btn--lg" href="#/app/nouveau">${t("cta.own")}</a><a class="btn btn--outline-light btn--lg" href="#/app/connecteur">${t("cta.mcp")}</a></div>
-      </div>
-    </section>`);
-
-  mountMock(root.querySelector("#hero-mock"), "support");
-  const pv = root.querySelector("#pv-mock");
+const bindPreview = (root) => {
+  const pv = root.querySelector("#pv-mock"); if (!pv) return;
   mountMock(pv, "support", { flat: true });
   root.querySelectorAll("[data-scn]").forEach((b) => b.addEventListener("click", () => {
     root.querySelectorAll("[data-scn]").forEach((x) => x.setAttribute("aria-selected", String(x === b)));
     mountMock(pv, b.dataset.scn, { flat: true });
   }));
+};
 
+const secDims = () => `
+  <section class="sec sec--tint"><div class="wrap">
+    <div class="kicker">${t("dim.kicker")}</div><h2>${t("dim.title")}</h2>
+    <div class="dims8">${DIM_IDS.map((d, i) => `<div><span class="n">${i + 1}</span><h3>${t(`dim.${d}`)}</h3><p>${t(`dim.${d}.d`)}</p></div>`).join("")}</div>
+    <p class="note">${t("dim.note")}</p>
+  </div></section>`;
+
+const secRoles = () => `
+  <section class="sec sec--navy"><div class="wrap">
+    <div class="kicker">${t("roles.kicker")}</div><h2>${t("roles.title")}</h2>
+    <div class="roles3">
+      <div><div class="who">IA</div><h3>${t("roles.ai.t")}</h3><p>${t("roles.ai.d")}</p></div>
+      <div><div class="who">${en() ? "Lawyer" : "Avocat"}</div><h3>${t("roles.law.t")}</h3><p>${t("roles.law.d")}</p></div>
+      <div><div class="who">${en() ? "Company" : "Entreprise"}</div><h3>${t("roles.co.t")}</h3><p>${t("roles.co.d")}</p></div>
+    </div>
+  </div></section>`;
+
+const secRegistry = () => `
+  <section class="sec"><div class="wrap split">
+    <div><div class="kicker">${t("reg.kicker")}</div><h2>${t("reg.title")}</h2><p class="sec__lead">${t("reg.body")}</p><p style="margin-top:24px"><a class="btn btn--secondary" href="#/app/registre">${t("reg.open")}</a></p></div>
+    <div><div id="reg-mini"><span class="sk" style="height:180px"></span></div><p class="note">${t("reg.live")}</p></div>
+  </div></section>`;
+
+const bindRegistry = (root) => {
+  const el = root.querySelector("#reg-mini"); if (!el) return;
   api("/registre").then(({ dossiers }) => {
     const rows = dossiers.filter((x) => x.statut === "termine").slice(0, 6);
-    root.querySelector("#reg-mini").innerHTML = `
-      <table class="regmini"><thead><tr><th>${t("tbl.tool")}</th><th>${t("tbl.avis")}</th><th>${t("tbl.legal")}</th><th>${t("tbl.decision")}</th></tr></thead>
+    el.innerHTML = `<table class="regmini"><thead><tr><th>${t("tbl.tool")}</th><th>${t("tbl.avis")}</th><th>${t("tbl.legal")}</th><th>${t("tbl.decision")}</th></tr></thead>
       <tbody>${rows.map((x) => `<tr><td><strong style="font-weight:500">${esc(x.outil)}</strong><div class="small muted">${esc(x.fournisseur)}</div></td><td>${avisPill(x.verdict)}</td><td class="small">${x.validation ? esc(x.validation.role) : `<span class="muted">${t("wf.pending")}</span>`}</td><td class="small">${decisionPill(x.decision)}</td></tr>`).join("")}</tbody></table>`;
-  }).catch(() => { root.querySelector("#reg-mini").innerHTML = `<p class="err">${t("tbl.error")}</p>`; });
+  }).catch(() => { el.innerHTML = `<p class="err">${t("tbl.error")}</p>`; });
+};
 
-  if (anchor) { const el = root.querySelector(`#${anchor}`); if (el) requestAnimationFrame(() => el.scrollIntoView({ block: "start" })); }
-  else window.scrollTo(0, 0);
+const secLimits = (tint = true, items = [1, 2, 3, 4, 5]) => `
+  <section class="sec${tint ? " sec--tint" : ""}"><div class="wrap">
+    <div class="kicker">${t("sec.kicker")}</div><h2>${t("sec.title")}</h2>
+    <div class="sec5">${items.map((i) => `<div><h3>${i === 5 ? `${ICON.lock}` : ""}${t(`sec.${i}.t`)}</h3><p>${t(`sec.${i}.d`)}</p></div>`).join("")}</div>
+  </div></section>`;
+
+const secCta = () => `
+  <section class="sec sec--navy"><div class="wrap">
+    <div class="kicker">${t("cta.kicker")}</div><h2>${t("cta.title")}</h2><p class="sec__lead">${t("cta.body")}</p>
+    <div class="cta-band"><a class="btn btn--light btn--lg" href="#/app/nouveau">${t("way.chat.cta")}</a><a class="btn btn--outline-light btn--lg" href="#/demo">${t("cta.demo")}</a><a class="btn btn--outline-light btn--lg" href="#/app/connecteur">${t("cta.mcp")}</a></div>
+  </div></section>`;
+
+const secMore = (current) => `
+  <section class="sec"><div class="wrap">
+    <div class="kicker">${t("more.kicker")}</div>
+    <div class="more">${PAGES.filter(([k]) => k !== current).map(([k, title, d]) => `<a href="#/${k}"><strong>${t(title)}</strong><span>${t(d)}</span><span class="more__go">${ICON.arrow}</span></a>`).join("")}</div>
+  </div></section>`;
+
+function done(root) { bindPreview(root); bindRegistry(root); window.scrollTo(0, 0); }
+
+// Accueil : la barre de l'assistant d'abord, puis l'écran d'analyse réel.
+export function renderLanding(root) {
+  document.title = en() ? "Aucteva, legal governance for AI tools" : "Aucteva, gouvernance juridique des outils d'IA";
+  siteLayout(root, `
+    <section class="hero hero--ask">
+      <div class="wrap">
+        <div class="hero__copy">
+          <div class="hero__line" aria-hidden="true"></div>
+          <h1>${t("hero.title")}</h1>
+          <p class="hero__sub">${t("hero.sub")}</p>
+        </div>
+        <div class="hero__ask" id="hero-ask"></div>
+        <div class="hero__shot" id="hero-mock"></div>
+        <p class="hero__caption">${t("hero.caption")}</p>
+      </div>
+    </section>
+    ${secWays()}
+    ${secRoles()}
+    ${secMore(null)}
+    ${secRegistry()}
+    ${secCta()}`);
+  askBar(root.querySelector("#hero-ask"), { tone: "dark", chips: 6 });
+  mountMock(root.querySelector("#hero-mock"), "support");
+  done(root);
+}
+
+export function renderProduct(root) {
+  document.title = `${t("nav.product")}, Aucteva`;
+  siteLayout(root, `${pageHero(t("nav.product"), t("product.title"), t("product.lead"))}${secProblem()}${secDims()}${secRoles()}${secRegistry()}${secMore("produit")}${secCta()}`, "produit");
+  done(root);
+}
+
+export function renderHow(root) {
+  document.title = `${t("nav.how")}, Aucteva`;
+  siteLayout(root, `${pageHero(t("nav.how"), t("howp.title"), t("howp.lead"))}${secWays()}${secHow()}${secPreview(false)}${secRoles()}${secMore("fonctionnement")}${secCta()}`, "fonctionnement");
+  done(root);
+}
+
+export function renderCases(root) {
+  document.title = `${t("nav.cases")}, Aucteva`;
+  const DEPT = { marketing: t("cases.dept.marketing"), support: t("cases.dept.support"), recruiter: t("cases.dept.recruiter") };
+  const cards = SCENARIOS.map((s) => {
+    const r = analyse(s);
+    const dims = dimensionsOf(r).filter((d) => d.status === "dangereuse" || d.status === "ambiguë");
+    return `<article class="case">
+      <div class="case__head"><span class="tag">${esc(DEPT[s.id])}</span>${avisPill(r.verdict)}</div>
+      <h3>${esc(s.tool)} <span class="muted small">${esc(s.vendor)}</span></h3>
+      <p class="case__uc">${esc(s.useCase)}</p>
+      <div class="case__flags"><div class="small muted">${t("cases.flags")}</div>${dims.length ? dims.map((d) => `<div class="case__flag">${clausePill(d.status)}<span>${esc(t(`dim.${d.id}`))}</span></div>`).join("") : `<p class="small">${t("cases.none")}</p>`}</div>
+      <div class="case__actions"><button type="button" class="btn" data-run="${s.id}" data-mode="regles">${t("cases.run")}</button><button type="button" class="btn btn--secondary" data-ask="${s.id}">${t("way.chat.cta")}</button></div>
+    </article>`;
+  }).join("");
+  siteLayout(root, `${pageHero(t("nav.cases"), t("cases.title"), t("cases.lead"))}
+    <section class="sec"><div class="wrap"><div class="cases">${cards}</div><p class="disclaimer" style="margin-top:20px">${t("demo.disclaimer")}</p></div></section>
+    ${secPreview(true).replace('class="sec"', 'class="sec sec--tint"')}
+    <section class="sec"><div class="wrap">
+      <div class="kicker">${t("cases.real.kicker")}</div><h2>${t("cases.real.title")}</h2><p class="sec__lead">${t("cases.real.body")}</p>
+      <div id="real" style="margin-top:28px"><span class="sk" style="height:120px"></span></div>
+    </div></section>
+    ${secMore("cas-usage")}${secCta()}`, "cas-usage");
+  root.querySelectorAll("[data-run]").forEach((b) => b.addEventListener("click", () => runScenario(b.dataset.run, b.dataset.mode, b)));
+  root.querySelectorAll("[data-ask]").forEach((b) => b.addEventListener("click", async () => {
+    const ex = EXAMPLES.find((x) => x.scn === b.dataset.ask), s = SCENARIOS.find((x) => x.id === b.dataset.ask);
+    b.disabled = true;
+    try { await startConversation(ex[en() ? "en" : "fr"], [{ nom: `contrat-${slug(s.tool)}.md`, texte: s.contract }]); }
+    catch (e) { toast(e.message, "err"); b.disabled = false; }
+  }));
+  realContracts(root.querySelector("#real"));
+  done(root);
+}
+
+export function renderSecurity(root) {
+  document.title = `${t("nav.security")}, Aucteva`;
+  siteLayout(root, `${pageHero(t("nav.security"), t("secp.title"), t("secp.lead"))}
+    <section class="sec"><div class="wrap">
+      <div class="kicker">${t("secp.ai.kicker")}</div><h2>${t("secp.ai.title")}</h2>
+      <div class="sec5">${[1, 2, 3, 4].map((i) => `<div><h3>${t(`secp.ai.${i}.t`)}</h3><p>${t(`secp.ai.${i}.d`)}</p></div>`).join("")}</div>
+    </div></section>
+    ${secLimits(true, [3, 4, 5])}
+    <section class="sec"><div class="wrap split">
+      <div><div class="kicker">${t("secp.data.kicker")}</div><h2>${t("secp.data.title")}</h2><p style="margin-top:24px"><a class="btn btn--secondary" href="#/confidentialite">${t("secp.data.link")}</a></p></div>
+      <ul class="facts">${[1, 2, 3, 4].map((i) => `<li>${t(`secp.data.${i}`)}</li>`).join("")}</ul>
+    </div></section>
+    ${secMore("securite")}${secCta()}`, "securite");
+  done(root);
+}
+
+function realContracts(el) {
+  const tools = new Set(SCENARIOS.map((s) => s.tool));
+  api("/registre").then(({ dossiers }) => {
+    const seen = new Set();
+    const rows = dossiers.filter((x) => x.statut === "termine" && x.mode === "claude" && !tools.has(x.outil) && x.mots > 800 && !/test/i.test(x.outil)).filter((x) => { const k = `${x.outil}|${x.fournisseur}`; if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 8);
+    el.innerHTML = rows.length ? `<div class="card tablewrap"><table class="table"><thead><tr><th>${t("tbl.tool")}</th><th>${t("tbl.vendor")}</th><th>${t("tbl.docs")}</th><th>${t("tbl.avis")}</th><th>${t("tbl.level")}</th><th></th></tr></thead><tbody>
+      ${rows.map((x) => `<tr><td><a class="t-tool" href="#/app/dossier/${esc(x.id)}">${esc(x.outil)}</a></td><td>${esc(x.fournisseur)}</td><td class="muted">${fmtInt(x.mots)} ${t("d.words")}</td><td>${avisPill(x.verdict)}</td><td class="num">${x.score}</td><td><a href="#/app/dossier/${esc(x.id)}">${t("tbl.open")}</a></td></tr>`).join("")}
+    </tbody></table></div>` : `<p class="muted">${t("tbl.empty")}</p>`;
+  }).catch(() => { el.innerHTML = `<p class="err">${t("tbl.error")}</p>`; });
 }
 
 // Démonstration : chaque scénario ouvre un vrai dossier au registre.
@@ -256,20 +327,13 @@ export function renderDemo(root) {
 
       <h2 class="h-sub">${t("demo.other.title")}</h2>
       <div class="list-links">
-        <a href="#/app/nouveau/conversation"><strong>${t("demo.other.chat")}</strong><span>${t("demo.other.chat.d")}</span></a>
-        <a href="#/app/nouveau"><strong>${t("demo.other.form")}</strong><span>${t("demo.other.form.d")}</span></a>
+        <a href="#/app/nouveau"><strong>${t("demo.other.chat")}</strong><span>${t("demo.other.chat.d")}</span></a>
+        <a href="#/app/nouveau/formulaire"><strong>${t("demo.other.form")}</strong><span>${t("demo.other.form.d")}</span></a>
         <a href="#/app/connecteur"><strong>${t("demo.other.mcp")}</strong><span>${t("demo.other.mcp.d")}</span></a>
       </div>
     </div>`);
   root.querySelectorAll("[data-run]").forEach((b) => b.addEventListener("click", () => runScenario(b.dataset.run, b.dataset.mode, b)));
-  const tools = new Set(SCENARIOS.map((s) => s.tool));
-  api("/registre").then(({ dossiers }) => {
-    const seen = new Set();
-    const rows = dossiers.filter((x) => x.statut === "termine" && x.mode === "claude" && !tools.has(x.outil) && x.mots > 800 && !/test/i.test(x.outil)).filter((x) => { const k = `${x.outil}|${x.fournisseur}`; if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 8);
-    root.querySelector("#real").innerHTML = rows.length ? `<div class="card tablewrap"><table class="table"><thead><tr><th>${t("tbl.tool")}</th><th>${t("tbl.vendor")}</th><th>${t("tbl.docs")}</th><th>${t("tbl.avis")}</th><th>${t("tbl.level")}</th><th></th></tr></thead><tbody>
-      ${rows.map((x) => `<tr><td><a class="t-tool" href="#/app/dossier/${esc(x.id)}">${esc(x.outil)}</a></td><td>${esc(x.fournisseur)}</td><td class="muted">${fmtInt(x.mots)} ${t("d.words")}</td><td>${avisPill(x.verdict)}</td><td class="num">${x.score}</td><td><a href="#/app/dossier/${esc(x.id)}">${t("tbl.open")}</a></td></tr>`).join("")}
-    </tbody></table></div>` : `<p class="muted">${t("tbl.empty")}</p>`;
-  }).catch(() => { root.querySelector("#real").innerHTML = `<p class="err">${t("tbl.error")}</p>`; });
+  realContracts(root.querySelector("#real"));
   window.scrollTo(0, 0);
 }
 

@@ -4,6 +4,9 @@ import { api, esc, fmtInt, fmtSize, countWords, ICON, toast, session, avisPill, 
 import { shellLayout, invalidate } from "./shell.js";
 import { analyse } from "./engine.js";
 import { SCENARIOS, CATEGORIES } from "./scenarios.js";
+import { readFile } from "./files.js";
+import { askBar } from "./ask.js";
+export { readFile };
 
 const DEPTS = { fr: ["Juridique", "Ressources humaines", "Marketing", "Service client", "Informatique", "Finance", "Achats", "Direction", "Autre"], en: ["Legal", "Human resources", "Marketing", "Customer service", "IT", "Finance", "Procurement", "Management", "Other"] };
 const CAT_EN = { chatbot: "Chatbot, internal assistant", rh: "Human resources, recruitment", marketing: "Marketing, content", support: "Customer support", documents: "Document analysis", code: "Coding assistant", autre: "Other" };
@@ -16,47 +19,14 @@ let draft = session.get("aucteva.draft", null) || blank();
 const save = () => session.set("aucteva.draft", { ...draft, docs: draft.docs.filter((d) => d.status === "ready") });
 let etat = null;
 
-// Lecture des fichiers : PDF (pdf.js), Word (.docx), texte.
-// Rend { texte, pages } : pages = position du début de chaque page dans le texte (PDF seulement).
-export async function readFile(file) {
-  const name = file.name.toLowerCase();
-  if (file.size > 25 * 1048576) throw new Error(L("Fichier trop lourd (25 Mo au plus).", "File too large (25 MB max)."));
-  if (name.endsWith(".pdf") || file.type === "application/pdf") return readPdf(file);
-  if (name.endsWith(".docx")) return readDocx(file);
-  if (/\.(txt|md|text)$/.test(name) || file.type.startsWith("text/")) return { texte: (await file.text()).replace(/\r\n?/g, "\n") };
-  throw new Error(L("Formats acceptés : PDF, Word (.docx), texte (.txt, .md).", "Accepted formats: PDF, Word (.docx), text (.txt, .md)."));
-}
-let pdfjs = null;
-async function readPdf(file) {
-  if (!pdfjs) { pdfjs = await import("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs"); pdfjs.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs"; }
-  const pdf = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
-  const pages = [];
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const content = await (await pdf.getPage(i)).getTextContent();
-    let line = "", lastY = null; const out = [];
-    for (const it of content.items) { if (!("str" in it)) continue; const y = it.transform ? Math.round(it.transform[5]) : null; if (lastY !== null && y !== null && Math.abs(y - lastY) > 2) { out.push(line.trim()); line = ""; } line += it.str + (it.hasEOL ? "\n" : " "); lastY = y; }
-    out.push(line.trim()); pages.push(out.filter(Boolean).join("\n").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n"));
-  }
-  const starts = []; let off = 0;
-  for (const pg of pages) { starts.push(off); off += pg.length + 2; }
-  return { texte: pages.join("\n\n"), pages: starts };
-}
-function loadScript(src) { return new Promise((res, rej) => { if (document.querySelector(`script[src="${src}"]`)) return res(); const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej(new Error("Bibliothèque indisponible")); document.head.appendChild(s); }); }
-async function readDocx(file) {
-  await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js");
-  const zip = await window.JSZip.loadAsync(await file.arrayBuffer());
-  const doc = zip.file("word/document.xml"); if (!doc) throw new Error(L("Document Word illisible", "Unreadable Word document"));
-  const xml = new DOMParser().parseFromString(await doc.async("string"), "application/xml");
-  return { texte: [...xml.getElementsByTagNameNS("*", "p")].map((p) => [...p.getElementsByTagNameNS("*", "t")].map((x) => x.textContent).join("")).join("\n").replace(/\n{3,}/g, "\n\n").trim() };
-}
 const ext = (n) => (n.split(".").pop() || "").toUpperCase().slice(0, 5);
 
 function newHead(v, tab) {
   return `<div class="ph"><div><h1>${t("new.title")}</h1><p>${t("new.sub")}</p></div></div>
     <div class="tabs" role="tablist" style="margin-bottom:20px">
-      <a href="#/app/nouveau" role="tab" aria-selected="${tab === "guided"}">${t("new.tab.guided")}</a>
-      <a href="#/app/nouveau/conversation" role="tab" aria-selected="${tab === "chat"}">${t("new.tab.chat")}</a>
-      <a href="#/app/connecteur" role="tab" aria-selected="false">${t("new.tab.mcp")}</a>
+      <a href="#/app/nouveau" role="tab" aria-selected="${tab === "chat"}">${ICON.chat}${t("new.tab.chat")}</a>
+      <a href="#/app/connecteur" role="tab" aria-selected="false">${ICON.plug}${t("new.tab.mcp")}</a>
+      <a href="#/app/nouveau/formulaire" role="tab" aria-selected="${tab === "guided"}">${ICON.files}${t("new.tab.guided")}</a>
     </div>`;
 }
 const stepper = (n) => `<ol class="stepper">${[1, 2, 3, 4].map((i) => `<li class="${i === n ? "is-on" : i < n ? "is-done" : ""}"${i === n ? ' aria-current="step"' : ""}><span class="d">${i < n ? ICON.check : i}</span><span class="t">${t(`new.s${i}`)}</span></li>`).join("")}</ol>`;
@@ -64,8 +34,7 @@ const stepper = (n) => `<ol class="stepper">${[1, 2, 3, 4].map((i) => `<li class
 export function renderNew(root, sub) {
   document.title = `${t("app.new")}, Aucteva`;
   const v = shellLayout(root, "new");
-  if (sub === "conversation") return renderChatStart(v);
-  if (sub === "nouveau-vide") { draft = blank(); save(); }
+  if (sub !== "formulaire") return renderChatStart(v);
   if (!etat) api("/etat").then((e) => { etat = e; if (draft.step === 2 && location.hash.startsWith("#/app/nouveau")) paint(); }).catch(() => { etat = { lecture: null }; });
   const paint = () => { v.innerHTML = newHead(v, "guided") + stepper(draft.step) + (draft.step === 1 ? step1() : step2()); (draft.step === 1 ? bind1 : bind2)(v, paint); window.scrollTo(0, 0); };
   paint();
@@ -261,7 +230,7 @@ export async function renderProgress(root, id) {
     if (d.statut === "termine") return finish(d);
     if (d.statut === "erreur") {
       clearTimers();
-      v.querySelector("#perr").innerHTML = `<p class="err" style="margin-top:16px">${t("pg.fail")} : ${esc(d.erreur || "")}</p><div style="display:flex;gap:8px;margin-top:12px"><button type="button" class="btn" id="rr">${t("pg.retryRules")}</button><a class="btn btn--secondary" href="#/app/nouveau">${t("pg.edit")}</a></div>`;
+      v.querySelector("#perr").innerHTML = `<p class="err" style="margin-top:16px">${t("pg.fail")} : ${esc(d.erreur || "")}</p><div style="display:flex;gap:8px;margin-top:12px"><button type="button" class="btn" id="rr">${t("pg.retryRules")}</button><a class="btn btn--secondary" href="#/app/nouveau/formulaire">${t("pg.edit")}</a></div>`;
       v.querySelector("#rr").addEventListener("click", async () => { try { const c = (await api(`/examens/${id}/contrat`)).texte; const i = d.input; const r = await api("/examens", { tool: i.tool, vendor: i.vendor, category: i.category, useCase: i.useCase, dataTypes: i.dataTypes, countries: i.countries, users: i.users, contract: c, source: i.source, departement: i.departement, usage: i.usage, responsable: i.responsable, documents: i.documents, mode: "regles" }); location.hash = `#/app/en-cours/${r.dossier.id}`; } catch (e) { toast(e.message, "err"); } });
       return;
     }
@@ -309,20 +278,13 @@ function bindComposer(v, onSend) {
 }
 
 function renderChatStart(v) {
-  v.innerHTML = newHead(v, "chat") + `<div class="chat"><div class="chat__list"><div class="msg msg--assistant"><div class="msg__text">${esc(t("conv.intro"))}</div></div></div>
-    <p class="scnbar" style="margin:0 0 12px">${t("new.scenario")} ${SCENARIOS.map((s) => `<button type="button" class="btn btn--ghost btn--sm" data-scn="${s.id}">${esc(s.tool)}</button>`).join("")}</p>
-    ${composer(t("conv.placeholder"))}</div>`;
-  const start = async (text, pieces) => {
-    v.querySelector("#cs").disabled = true;
-    try { const { conversation } = await api("/conversations", {}); await api(`/conversations/${conversation.id}/messages`, { text, pieces }); location.hash = `#/app/conversation/${conversation.id}`; return true; }
-    catch (e) { toast(e.message, "err"); v.querySelector("#cs").disabled = false; return false; }
-  };
-  const { input } = bindComposer(v, start);
-  v.querySelectorAll("[data-scn]").forEach((b) => b.addEventListener("click", () => {
-    const s = SCENARIOS.find((x) => x.id === b.dataset.scn);
-    start(`Nous voulons utiliser ${s.tool} (${s.vendor}) pour cet usage : ${s.useCase} Pays : ${s.countries}. ${s.users} utilisateurs. Est-ce que nous pouvons l'autoriser ?`, [{ nom: `contrat-${slug(s.tool)}.md`, texte: s.contract }]);
-  }));
-  input.focus();
+  v.innerHTML = newHead(v, "chat") + `<section class="newask"><h2>${t("ov.ask")}</h2><div id="nask"></div></section>
+    <h2 class="h-sub">${t("new.alt")}</h2>
+    <div class="list-links list-links--2">
+      <a href="#/app/connecteur"><strong>${t("way.mcp.t")}</strong><span>${t("way.mcp.d")}</span></a>
+      <a href="#/app/nouveau/formulaire"><strong>${t("way.form.t")}</strong><span>${t("way.form.d")}</span></a>
+    </div>`;
+  askBar(v.querySelector("#nask"), { tone: "light", chips: 8, autofocus: true });
 }
 
 export async function renderConversation(root, id) {
@@ -330,8 +292,8 @@ export async function renderConversation(root, id) {
   const v = shellLayout(root, "new");
   let c;
   try { c = (await api(`/conversations/${id}`)).conversation; }
-  catch (e) { v.innerHTML = `<div class="err">${esc(e.message)}</div><p style="margin-top:12px"><a class="btn" href="#/app/nouveau/conversation">${t("conv.new")}</a></p>`; return; }
-  v.innerHTML = `<div class="ph"><div><div class="crumbs"><a href="#/app/nouveau/conversation">${t("new.tab.chat")}</a> / <span class="mono">${esc(id)}</span></div><h1 id="ct"></h1></div><a class="btn btn--secondary" href="#/app/nouveau/conversation">${t("conv.new")}</a></div>
+  catch (e) { v.innerHTML = `<div class="err">${esc(e.message)}</div><p style="margin-top:12px"><a class="btn" href="#/app/nouveau">${t("conv.new")}</a></p>`; return; }
+  v.innerHTML = `<div class="ph"><div><div class="crumbs"><a href="#/app/nouveau">${t("new.tab.chat")}</a> / <span class="mono">${esc(id)}</span></div><h1 id="ct"></h1></div><a class="btn btn--secondary" href="#/app/nouveau">${t("conv.new")}</a></div>
     <div class="chat"><div class="chat__list" id="cl" aria-live="polite"></div>${composer(t("conv.reply"))}</div>`;
   const list = v.querySelector("#cl");
   let at = Date.now();

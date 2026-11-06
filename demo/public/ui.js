@@ -57,6 +57,7 @@ export const ICON = {
   back: svg('<path d="M15 6l-6 6 6 6"/>'),
   arrow: svg('<path d="M5 12h14M13 6l6 6-6 6"/>'),
   clip: svg('<path d="M21 11.5 12.5 20a5 5 0 0 1-7-7l8.5-8.5a3.5 3.5 0 0 1 5 5L10.5 18a2 2 0 0 1-3-3l8-8"/>'),
+  chat: svg('<path d="M5 5.5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8.5L6 20v-3.5H5a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1z"/><path d="M8.5 10h7M8.5 13h4.5"/>'),
   send: svg('<path d="M12 19V5m0 0-6 6m6-6 6 6"/>'),
   search: svg('<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/>', 18),
   upload: svg('<path d="M12 15.5V4.5m0 0-4 4m4-4 4 4M5 15v3.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V15"/>', 22),

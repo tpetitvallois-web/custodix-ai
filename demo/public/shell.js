@@ -1,6 +1,7 @@
 // Application d'Aucteva : coque avec navigation latérale, vue d'ensemble, outils, dossiers, file de validation, registre, paramètres, connecteur.
 import { t, getLang, setLang } from "./i18n.js";
 import { api, esc, fmtInt, fmtDay, fmtStamp, ICON, LOGO, stage, stagePill, avisPill, decisionPill, copy, toast } from "./ui.js";
+import { askBar } from "./ask.js";
 
 const NAV = [
   ["overview", "#/app", ICON.overview], ["tools", "#/app/outils", ICON.tools], ["new", "#/app/nouveau", ICON.plus],
@@ -105,7 +106,8 @@ async function withRows(view, render) {
 export function renderOverview(root) {
   document.title = `${t("app.overview")}, Aucteva`;
   const v = shellLayout(root, "overview");
-  v.innerHTML = `${ph(t("ov.title"), t("ov.sub"), `<a class="btn" href="#/app/nouveau">${ICON.plus}${t("app.new")}</a>`)}<div data-body><div class="kpis">${Array.from({ length: 5 }, () => `<div class="kpi"><span class="sk" style="width:60%"></span><span class="sk" style="height:26px;margin-top:12px;width:40%"></span></div>`).join("")}</div>${skeleton()}</div>`;
+  v.innerHTML = `${ph(t("ov.title"), t("ov.sub"), `<a class="btn btn--secondary" href="#/app/nouveau/formulaire">${ICON.files}${t("new.tab.guided")}</a>`)}<section class="newask newask--ov"><h2>${t("ov.ask")}</h2><div id="ovask"></div></section><div data-body><div class="kpis">${Array.from({ length: 5 }, () => `<div class="kpi"><span class="sk" style="width:60%"></span><span class="sk" style="height:26px;margin-top:12px;width:40%"></span></div>`).join("")}</div>${skeleton()}</div>`;
+  askBar(v.querySelector("#ovask"), { tone: "light", chips: 5 });
   withRows(v, (rows) => {
     const tools = new Set(rows.map((x) => `${x.outil}|${x.fournisseur}`.toLowerCase())).size;
     const running = rows.filter((x) => ["en_attente", "en_cours", "en_attente_api", "en_cours_api", "attente_lecture"].includes(x.statut)).length;
