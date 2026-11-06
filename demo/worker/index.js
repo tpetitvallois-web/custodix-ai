@@ -272,6 +272,11 @@ export class Registre extends DurableObject {
       c.dossierId = done.id;
       c.messages.push({ role: "assistant", text: avisMessage(done), at: Date.now(), dossier: { id: done.id, verdict: done.resultat.verdict, score: done.resultat.score, citations: done.resultat.lecture?.citations || null, bloquants: done.resultat.points_bloquants.length, conditions: done.resultat.conditions.length } });
     }
+    else if (res && res.pret) {
+      // Le modèle annonce une lecture que le service ne peut pas transformer en dossier : on dit ce qui manque.
+      const manque = [!c.pieces.length && "le contrat, en fichier joint ou collé dans un message", !d.outil && "le nom de l'outil", !d.fournisseur && "le fournisseur", !d.cas_usage && "l'usage prévu"].filter(Boolean);
+      c.messages.push({ role: "assistant", text: manque.length ? `Pour préparer l'avis, il me manque : ${manque.join(", ")}.` : "La lecture du contrat n'a pas abouti. Renvoyez votre message pour la relancer.", at: Date.now() });
+    }
     c.statut = "idle"; c.erreur = null; c.maj = Date.now();
     await this.ctx.storage.put(`conv:${id}`, c);
     return this.convPublic(c);
@@ -543,10 +548,18 @@ export default {
       }
       if ((m = path.match(/^\/conversations\/(CV-[0-9-]+)\/messages$/)) && method === "POST") {
         const b = await json(); if (!b) return err("Corps JSON attendu.");
-        const text = String(b.text || "").replace(/\u0000/g, "").trim().slice(0, 6000);
+        let text = String(b.text || "").replace(/\u0000/g, "").replace(/\r\n?/g, "\n").trim().slice(0, MAX_CONTRACT);
         if (!text && !(Array.isArray(b.pieces) && b.pieces.length)) return err("Message vide.");
+        // Contrat collé dans le message : il devient une pièce jointe, pour être lu et cité comme un fichier déposé.
+        const colle = [];
+        if (text.length > 1500) {
+          const cut = text.indexOf("\n");
+          const head = cut > 0 ? text.slice(0, cut).trim() : "";
+          if (head && head.length <= 400 && text.length - cut > 1000) { colle.push({ nom: "texte-colle.txt", texte: text.slice(cut).trim() }); text = head; }
+          else { colle.push({ nom: "texte-colle.txt", texte: text }); text = "Voici le texte du contrat, collé dans le message."; }
+        }
         { const q = await registre.quota(await empreinte(request, env)); if (!q.ok) return err(q.erreur, 429); }
-        const pieces = (Array.isArray(b.pieces) ? b.pieces : []).slice(0, 6).map((p) => ({ nom: String(p.nom || "document").slice(0, 120), texte: String(p.texte || "").replace(/\u0000/g, "").replace(/\r\n?/g, "\n").trim() })).filter((p) => p.texte);
+        const pieces = [...colle, ...(Array.isArray(b.pieces) ? b.pieces : [])].slice(0, 6).map((p) => ({ nom: String(p.nom || "document").slice(0, 120), texte: String(p.texte || "").replace(/\u0000/g, "").replace(/\r\n?/g, "\n").trim() })).filter((p) => p.texte);
         const r = await registre.convMessage(m[1], text, pieces);
         if (r.error) return err(r.error, r.status);
         if (!env.ANTHROPIC_API_KEY) ctx.waitUntil(declencherGitHub(env, m[1]));
