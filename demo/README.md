@@ -6,7 +6,7 @@ En ligne : https://aucteva.pages.dev (compte Cloudflare perso de Tom). C'est un 
 
 ## Interface (public/, modules ES sans build)
 
-- `app.js` routeur. Site public : `#/` (accueil, ancres `#/produit`, `#/fonctionnement`, `#/cas-usage`, `#/securite`), `#/demo`, `#/conditions`, `#/confidentialite`. Application : `#/app` (vue d'ensemble), `#/app/outils`, `#/app/nouveau` (parcours guidé) et `#/app/nouveau/conversation`, `#/app/dossiers`, `#/app/validation`, `#/app/registre`, `#/app/parametres`, `#/app/connecteur`, `#/app/en-cours/ID`, `#/app/conversation/ID`, `#/app/dossier/ID[/synthese|/decision]`. Les anciennes adresses (`#/analyse`, `#/rapport/ID`, `#/registre`...) sont redirigées.
+- `app.js` routeur par chemin (History API, sans `#`). Site public : `/`, `/produit`, `/fonctionnement`, `/cas-usage`, `/securite`, `/demo`, `/conditions`, `/confidentialite`. Application : `/app` (vue d'ensemble), `/app/outils`, `/app/nouveau` (l'assistant d'abord), `/app/nouveau/formulaire`, `/app/dossiers`, `/app/validation`, `/app/registre`, `/app/parametres`, `/app/connecteur`, `/app/en-cours/ID`, `/app/conversation/ID`, `/app/dossier/ID[/synthese|/decision]`. Le Worker sert `index.html` sur ces chemins (`PAGE_ROUTE` dans `worker/index.js`). Les anciennes adresses (`/#/securite`, `/#/rapport/ID`, `/registre`...) sont réécrites dans le navigateur.
 - `i18n.js` toutes les chaînes de l'interface, français et anglais. Le contenu des analyses reste en français.
 - `ui.js` accès API, formatage, icônes, statuts ; `doc.js` localisation des citations dans le texte (repli casse, apostrophes, espaces), sections, rendu numéroté ; `site.js` site public ; `shell.js` coque et listes ; `assess.js` parcours guidé, suivi d'analyse, conversation ; `dossier.js` espace d'analyse à deux panneaux, synthèse imprimable, validation et décision.
 - `engine.js` expose `DIMENSIONS` (les huit domaines) et `constats` dans le résultat (un constat complet par sujet, citation entière). Les dossiers antérieurs sont reconstitués depuis `clauses_critiques`.
@@ -15,8 +15,8 @@ En ligne : https://aucteva.pages.dev (compte Cloudflare perso de Tom). C'est un 
 ## Trois façons d'entrer
 
 - **Conversation (accueil)** : barre de dialogue au centre d'un accueil sombre. L'utilisateur écrit, dépose un contrat (PDF, Word, texte), pose sa question. L'assistant du cabinet (`worker/chat.js`, prompt + schéma JSON, modèle jamais nommé) déduit du contrat le nom de l'outil, le fournisseur, l'usage, ne demande que ce qui manque, et quand le contrat est là rend sa lecture des douze sujets dans le même tour : le Worker vérifie les citations, calcule l'avis et l'ajoute à la conversation avec un lien vers le dossier. Conversations `CV-AAAA-NNNN` dans le Durable Object (messages, pièces en tranches, dossier déduit), file commune avec les dossiers (`suivant()` sert les deux), routes `/api/conversations`.
-- **Formulaire** (`#/analyse`) : saisie champ par champ, deux lectures au choix (ci-dessous).
-- **Connecteur MCP** (`/mcp`, page `#/connecteur`) : l'assistant de l'utilisateur (Claude, ChatGPT, tout client MCP) ouvre le dossier et lit lui-même ; quatre outils (`worker/mcp.js`), sans authentification pour la démonstration.
+- **Formulaire** (`/app/nouveau/formulaire`) : saisie champ par champ, deux lectures au choix (ci-dessous).
+- **Connecteur MCP** (`/mcp`, page `/app/connecteur`) : l'assistant de l'utilisateur (Claude, ChatGPT, tout client MCP) ouvre le dossier et lit lui-même ; quatre outils (`worker/mcp.js`), sans authentification pour la démonstration.
 
 ## Deux lectures du contrat
 

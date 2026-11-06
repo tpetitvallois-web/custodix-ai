@@ -4,6 +4,13 @@ import { DIMENSIONS, TOPICS } from "./engine.js";
 
 export const BRAND = "Aucteva";
 
+// Navigation sans rechargement : adresses propres (/securite, /app/dossier/ID), rendues par le routeur d'app.js.
+export function go(path, { replace = false } = {}) {
+  if (replace) history.replaceState(null, "", path); else history.pushState(null, "", path);
+  window.dispatchEvent(new Event("route"));
+}
+export const rerender = () => window.dispatchEvent(new Event("route"));
+
 export async function api(path, body) {
   const r = await fetch(`/api${path}`, body === undefined ? {} : { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
   const data = await r.json().catch(() => ({}));

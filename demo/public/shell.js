@@ -1,11 +1,11 @@
 // Application d'Aucteva : coque avec navigation latérale, vue d'ensemble, outils, dossiers, file de validation, registre, paramètres, connecteur.
 import { t, getLang, setLang } from "./i18n.js";
-import { api, esc, fmtInt, fmtDay, fmtStamp, ICON, LOGO, stage, stagePill, avisPill, decisionPill, copy, toast } from "./ui.js";
+import { api, esc, fmtInt, fmtDay, fmtStamp, ICON, LOGO, stage, stagePill, avisPill, decisionPill, copy, toast, rerender } from "./ui.js";
 import { askBar } from "./ask.js";
 
 const NAV = [
-  ["overview", "#/app", ICON.overview], ["tools", "#/app/outils", ICON.tools], ["new", "#/app/nouveau", ICON.plus],
-  ["assessments", "#/app/dossiers", ICON.files], ["queue", "#/app/validation", ICON.queue], ["registry", "#/app/registre", ICON.registry], ["settings", "#/app/parametres", ICON.settings],
+  ["overview", "/app", ICON.overview], ["tools", "/app/outils", ICON.tools], ["new", "/app/nouveau", ICON.plus],
+  ["assessments", "/app/dossiers", ICON.files], ["queue", "/app/validation", ICON.queue], ["registry", "/app/registre", ICON.registry], ["settings", "/app/parametres", ICON.settings],
 ];
 
 let cache = { at: 0, rows: null };
@@ -22,23 +22,23 @@ export function shellLayout(root, current, { flush = false } = {}) {
   root.innerHTML = `
     <a class="skip" href="#vue">${getLang() === "en" ? "Skip to content" : "Aller au contenu"}</a>
     <div class="shell" id="shell">
-      <div class="topm"><a class="home" href="#/" style="color:#fff;text-decoration:none">${LOGO}</a><button type="button" id="menu" aria-label="Menu" aria-expanded="false">${ICON.menu}</button></div>
+      <div class="topm"><a class="home" href="/" style="color:#fff;text-decoration:none">${LOGO}</a><button type="button" id="menu" aria-label="Menu" aria-expanded="false">${ICON.menu}</button></div>
       <aside class="side" aria-label="${getLang() === "en" ? "Application" : "Application"}">
-        <a class="home" href="#/">${LOGO}</a>
+        <a class="home" href="/">${LOGO}</a>
         <nav class="side__nav">
           ${NAV.map(([k, h, i]) => `<a href="${h}"${k === current ? ' aria-current="page"' : ""}>${i}<span>${t(`app.${k}`)}</span>${k === "queue" && pending ? `<span class="count">${pending}</span>` : ""}</a>`).join("")}
           <div class="side__sep"></div>
-          <a href="#/app/connecteur"${current === "connector" ? ' aria-current="page"' : ""}>${ICON.plug}<span>${t("app.connector")}</span></a>
+          <a href="/app/connecteur"${current === "connector" ? ' aria-current="page"' : ""}>${ICON.plug}<span>${t("app.connector")}</span></a>
         </nav>
         <div class="side__foot">
           <span class="side__badge">${t("app.demoBadge")}</span>
           <button type="button" class="langbtn" data-lang>${t("lang.code")}</button>
-          <a href="#/">${ICON.back}${t("app.site")}</a>
+          <a href="/">${ICON.back}${t("app.site")}</a>
         </div>
       </aside>
       <main class="main${flush ? " main--flush" : ""}" id="vue"></main>
     </div>`;
-  root.querySelector("[data-lang]").addEventListener("click", () => { setLang(getLang() === "en" ? "fr" : "en"); window.dispatchEvent(new HashChangeEvent("hashchange")); });
+  root.querySelector("[data-lang]").addEventListener("click", () => { setLang(getLang() === "en" ? "fr" : "en"); rerender(); });
   const shell = root.querySelector("#shell"), menu = root.querySelector("#menu");
   menu.addEventListener("click", () => { const o = !shell.classList.contains("is-menu"); shell.classList.toggle("is-menu", o); menu.setAttribute("aria-expanded", String(o)); });
   shell.querySelectorAll(".side a").forEach((a) => a.addEventListener("click", () => shell.classList.remove("is-menu")));
@@ -49,7 +49,7 @@ const ph = (title, sub, actions = "") => `<div class="ph"><div><h1>${title}</h1>
 const skeleton = (n = 6) => `<div class="card"><div style="padding:16px;display:grid;gap:14px">${Array.from({ length: n }, () => `<span class="sk"></span>`).join("")}</div></div>`;
 const errBox = (msg) => `<div class="err"><span>${t("tbl.error")} : ${esc(msg)}</span><button type="button" class="btn btn--secondary btn--sm" data-retry>${t("tbl.retry")}</button></div>`;
 const lvl = (s) => (s == null ? `<span class="muted">·</span>` : `<span class="lvl"><span class="lvl__bar"><span style="width:${s}%"></span></span>${s}</span>`);
-export const dossierHref = (x) => (x.statut === "termine" ? `#/app/dossier/${x.id}` : `#/app/en-cours/${x.id}`);
+export const dossierHref = (x) => (x.statut === "termine" ? `/app/dossier/${x.id}` : `/app/en-cours/${x.id}`);
 
 // Tableau de dossiers : recherche, filtres, tri, pagination. Reste fluide sur plusieurs centaines de lignes.
 function dossierTable(el, rows, { pageSize = 25, compact = false } = {}) {
@@ -106,7 +106,7 @@ async function withRows(view, render) {
 export function renderOverview(root) {
   document.title = `${t("app.overview")}, Aucteva`;
   const v = shellLayout(root, "overview");
-  v.innerHTML = `${ph(t("ov.title"), t("ov.sub"), `<a class="btn btn--secondary" href="#/app/nouveau/formulaire">${ICON.files}${t("new.tab.guided")}</a>`)}<section class="newask newask--ov"><h2>${t("ov.ask")}</h2><div id="ovask"></div></section><div data-body><div class="kpis">${Array.from({ length: 5 }, () => `<div class="kpi"><span class="sk" style="width:60%"></span><span class="sk" style="height:26px;margin-top:12px;width:40%"></span></div>`).join("")}</div>${skeleton()}</div>`;
+  v.innerHTML = `${ph(t("ov.title"), t("ov.sub"), `<a class="btn btn--secondary" href="/app/nouveau/formulaire">${ICON.files}${t("new.tab.guided")}</a>`)}<section class="newask newask--ov"><h2>${t("ov.ask")}</h2><div id="ovask"></div></section><div data-body><div class="kpis">${Array.from({ length: 5 }, () => `<div class="kpi"><span class="sk" style="width:60%"></span><span class="sk" style="height:26px;margin-top:12px;width:40%"></span></div>`).join("")}</div>${skeleton()}</div>`;
   askBar(v.querySelector("#ovask"), { tone: "light", chips: 5 });
   withRows(v, (rows) => {
     const tools = new Set(rows.map((x) => `${x.outil}|${x.fournisseur}`.toLowerCase())).size;
@@ -117,7 +117,7 @@ export function renderOverview(root) {
     const k = (label, n, hint = "") => `<div class="kpi"><div class="kpi__label">${label}</div><div class="kpi__val">${fmtInt(n)}</div>${hint ? `<div class="kpi__hint">${hint}</div>` : ""}</div>`;
     v.querySelector("[data-body]").innerHTML = `
       <div class="kpis">${k(t("kpi.tools"), tools)}${k(t("kpi.running"), running)}${k(t("kpi.pending"), pending)}${k(t("kpi.decided"), decided)}${k(t("kpi.review"), review, t("kpi.review.hint"))}</div>
-      <div class="card__head" style="border:0;padding:0 0 12px"><h2 style="font-size:16px">${t("ov.recent")}</h2><a href="#/app/dossiers">${t("ov.all")}</a></div>
+      <div class="card__head" style="border:0;padding:0 0 12px"><h2 style="font-size:16px">${t("ov.recent")}</h2><a href="/app/dossiers">${t("ov.all")}</a></div>
       <div id="tbl"></div>`;
     dossierTable(v.querySelector("#tbl"), rows, { pageSize: 8, compact: true });
   });
@@ -126,7 +126,7 @@ export function renderOverview(root) {
 export function renderAssessments(root) {
   document.title = `${t("as.title")}, Aucteva`;
   const v = shellLayout(root, "assessments");
-  v.innerHTML = `${ph(t("as.title"), t("as.sub"), `<a class="btn" href="#/app/nouveau">${ICON.plus}${t("app.new")}</a>`)}<div data-body>${skeleton(10)}</div>`;
+  v.innerHTML = `${ph(t("as.title"), t("as.sub"), `<a class="btn" href="/app/nouveau">${ICON.plus}${t("app.new")}</a>`)}<div data-body>${skeleton(10)}</div>`;
   withRows(v, (rows) => dossierTable(v.querySelector("[data-body]"), rows));
 }
 
@@ -166,7 +166,7 @@ export function renderQueue(root) {
   withRows(v, (rows) => {
     const legal = rows.filter((x) => x.statut === "termine" && !x.validation);
     const dec = rows.filter((x) => x.validation && !x.decision);
-    const list = (arr, tab) => arr.length ? arr.slice(0, 60).map((x) => `<div class="qrow"><div><strong>${esc(x.outil)}</strong><span class="m">${esc(x.fournisseur)} · <span class="mono">${esc(x.id)}</span> · ${esc(fmtDay(x.maj || x.cree))}</span></div><div style="display:flex;gap:12px;align-items:center">${avisPill(x.verdict)}<a class="btn btn--secondary btn--sm" href="#/app/dossier/${esc(x.id)}/${tab}">${t("tbl.open")}</a></div></div>`).join("") : `<p class="empty">${t("q.none")}</p>`;
+    const list = (arr, tab) => arr.length ? arr.slice(0, 60).map((x) => `<div class="qrow"><div><strong>${esc(x.outil)}</strong><span class="m">${esc(x.fournisseur)} · <span class="mono">${esc(x.id)}</span> · ${esc(fmtDay(x.maj || x.cree))}</span></div><div style="display:flex;gap:12px;align-items:center">${avisPill(x.verdict)}<a class="btn btn--secondary btn--sm" href="/app/dossier/${esc(x.id)}/${tab}">${t("tbl.open")}</a></div></div>`).join("") : `<p class="empty">${t("q.none")}</p>`;
     v.querySelector("[data-body]").innerHTML = `<div class="grid2">
       <section class="card"><div class="card__head"><h2>${t("q.legal")}</h2><span class="pill pill--neutral">${legal.length}</span></div>${list(legal, "decision")}</section>
       <section class="card"><div class="card__head"><h2>${t("q.decision")}</h2><span class="pill pill--neutral">${dec.length}</span></div>${list(dec, "decision")}</section>
@@ -192,7 +192,7 @@ export function renderRegistry(root) {
         const review = d.decision ? fmtDay(new Date(d.decision.iso).setFullYear(new Date(d.decision.iso).getFullYear() + 1)) : null;
         const docs = d.documents?.length ? d.documents.join(", ") : d.source || (d.mots ? `${fmtInt(d.mots)} ${t("d.words")}` : "");
         return `<tr>
-          <td class="c-full"><a class="t-tool" href="#/app/dossier/${esc(d.id)}">${esc(d.outil)}</a><div class="small muted">${esc(d.fournisseur)}${count > 1 ? ` · ${count} ${t("tbl.count").toLowerCase()}` : ""}</div></td>
+          <td class="c-full"><a class="t-tool" href="/app/dossier/${esc(d.id)}">${esc(d.outil)}</a><div class="small muted">${esc(d.fournisseur)}${count > 1 ? ` · ${count} ${t("tbl.count").toLowerCase()}` : ""}</div></td>
           <td class="c-hide"><span class="t-uc">${esc(d.cas_usage || "")}</span></td>
           <td data-k="${esc(t("tbl.lastAnalysis"))}"><span class="mono small">${esc(d.id)}</span><div class="small muted">${esc(fmtDay(d.cree))}</div><div class="small">${avisPill(d.verdict)}</div></td>
           <td data-k="${esc(t("tbl.legal"))}" class="small">${d.validation ? `${esc(d.validation.nom)}<div class="muted">${esc(d.validation.role)}, ${esc(fmtDay(new Date(d.validation.iso).getTime()))}</div>` : `<span class="muted">${t("wf.pending")}</span>`}</td>
@@ -214,11 +214,11 @@ export async function renderSettings(root) {
     <div class="card">
       <div class="setrow"><div><h3>${t("set.lang")}</h3><p>${t("set.lang.d")}</p></div><div><div class="seg" role="radiogroup" aria-label="${esc(t("set.lang"))}"><label><input type="radio" name="lang" value="fr"${getLang() === "fr" ? " checked" : ""}><span>Français</span></label><label><input type="radio" name="lang" value="en"${getLang() === "en" ? " checked" : ""}><span>English</span></label></div></div></div>
       <div class="setrow"><div><h3>${t("set.reader")}</h3></div><div id="reader"><span class="sk" style="width:200px"></span></div></div>
-      <div class="setrow"><div><h3>${t("set.mcp")}</h3><p>${t("set.mcp.d")}</p></div><div><a class="btn btn--secondary" href="#/app/connecteur">${t("app.connector")}</a></div></div>
+      <div class="setrow"><div><h3>${t("set.mcp")}</h3><p>${t("set.mcp.d")}</p></div><div><a class="btn btn--secondary" href="/app/connecteur">${t("app.connector")}</a></div></div>
       <div class="setrow"><div><h3>${t("set.roles")}</h3><p>${t("set.roles.d")}</p></div><div><span class="pill pill--neutral">${ICON.lock}&nbsp;${t("set.soon")}</span></div></div>
-      <div class="setrow"><div><h3>${t("set.data")}</h3><p>${t("set.data.d")}</p></div><div class="small"><a href="#/confidentialite">${t("footer.privacy")}</a> · <a href="#/conditions">${t("footer.terms")}</a></div></div>
+      <div class="setrow"><div><h3>${t("set.data")}</h3><p>${t("set.data.d")}</p></div><div class="small"><a href="/confidentialite">${t("footer.privacy")}</a> · <a href="/conditions">${t("footer.terms")}</a></div></div>
     </div>`;
-  v.querySelectorAll("input[name=lang]").forEach((i) => i.addEventListener("change", () => { setLang(i.value); window.dispatchEvent(new HashChangeEvent("hashchange")); }));
+  v.querySelectorAll("input[name=lang]").forEach((i) => i.addEventListener("change", () => { setLang(i.value); rerender(); }));
   try { const e = await api("/etat"); v.querySelector("#reader").innerHTML = e.lecture ? `<span class="pill pill--ok">${t("set.reader.ok")}</span>${e.enAttente ? ` <span class="small muted">${e.enAttente} ${getLang() === "en" ? "queued" : "en attente"}</span>` : ""}` : `<span class="pill pill--neutral">${t("set.reader.off")}</span>`; }
   catch { v.querySelector("#reader").innerHTML = `<span class="pill pill--neutral">${t("set.reader.off")}</span>`; }
 }

@@ -1,6 +1,6 @@
 // Site public d'Aucteva : accueil, démonstration, pages légales, page introuvable.
 import { t, getLang, setLang } from "./i18n.js";
-import { api, esc, fmtInt, fmtDay, ICON, LOGO, avisPill, decisionPill, dimensionsOf, statusKey, CLAUSE, clausePill, slug, countWords, toast } from "./ui.js";
+import { api, esc, fmtInt, fmtDay, ICON, LOGO, avisPill, decisionPill, dimensionsOf, statusKey, CLAUSE, clausePill, slug, countWords, toast, go, rerender } from "./ui.js";
 import { analyse } from "./engine.js";
 import { SCENARIOS } from "./scenarios.js";
 import { fold, locate, renderDoc, scrollWithin } from "./doc.js";
@@ -13,13 +13,13 @@ export function siteLayout(root, inner, active = "") {
     <a class="skip" href="#contenu">${getLang() === "en" ? "Skip to content" : "Aller au contenu"}</a>
     <header class="sitebar" id="sitebar">
       <div class="wrap sitebar__in">
-        <a class="home" href="#/" aria-label="Aucteva, accueil">${LOGO}</a>
+        <a class="home" href="/" aria-label="Aucteva, accueil">${LOGO}</a>
         <nav class="sitenav" aria-label="${getLang() === "en" ? "Main" : "Principale"}">
-          ${PAGES.map(([k, l]) => `<a href="#/${k}"${k === active ? ' aria-current="page"' : ""}>${t(l)}</a>`).join("")}
+          ${PAGES.map(([k, l]) => `<a href="/${k}"${k === active ? ' aria-current="page"' : ""}>${t(l)}</a>`).join("")}
         </nav>
         <div class="sitebar__actions">
           <button type="button" class="langbtn" data-lang aria-label="${t("lang.switch")}">${t("lang.code")}</button>
-          <a class="btn btn--light btn--sm" href="#/demo">${t("nav.demo")}</a>
+          <a class="btn btn--light btn--sm" href="/demo">${t("nav.demo")}</a>
           <button type="button" class="sitebar__menu" aria-expanded="false" aria-controls="sitebar" aria-label="Menu">${ICON.menu}</button>
         </div>
       </div>
@@ -28,10 +28,10 @@ export function siteLayout(root, inner, active = "") {
     <footer class="sitefoot">
       <div class="wrap sitefoot__in">
         <div>${LOGO}<p style="max-width:520px;margin:0">${t("footer.line")}</p></div>
-        <nav aria-label="Footer"><a href="#/app">${t("nav.app")}</a><a href="#/app/connecteur">${t("footer.connector")}</a><a href="#/conditions">${t("footer.terms")}</a><a href="#/confidentialite">${t("footer.privacy")}</a></nav>
+        <nav aria-label="Footer"><a href="/app">${t("nav.app")}</a><a href="/app/connecteur">${t("footer.connector")}</a><a href="/conditions">${t("footer.terms")}</a><a href="/confidentialite">${t("footer.privacy")}</a></nav>
       </div>
     </footer>`;
-  root.querySelector("[data-lang]").addEventListener("click", () => { setLang(getLang() === "en" ? "fr" : "en"); window.dispatchEvent(new HashChangeEvent("hashchange")); });
+  root.querySelector("[data-lang]").addEventListener("click", () => { setLang(getLang() === "en" ? "fr" : "en"); rerender(); });
   const bar = root.querySelector("#sitebar"), menu = root.querySelector(".sitebar__menu");
   menu.addEventListener("click", () => { const open = !bar.classList.contains("is-open"); bar.classList.toggle("is-open", open); menu.setAttribute("aria-expanded", String(open)); });
   bar.querySelectorAll(".sitenav a").forEach((a) => a.addEventListener("click", () => bar.classList.remove("is-open")));
@@ -103,9 +103,9 @@ const secWays = (tint = false) => `
   <section class="sec${tint ? " sec--tint" : ""}"><div class="wrap">
     <div class="kicker">${t("ways.kicker")}</div><h2>${t("ways.title")}</h2>
     <div class="ways">
-      <a class="way way--main" href="#/app/nouveau"><span class="way__tag">${t("way.reco")}</span><span class="way__ic">${ICON.chat}</span><h3>${t("way.chat.t")}</h3><p>${t("way.chat.d")}</p><span class="way__go">${t("way.chat.cta")}${ICON.arrow}</span></a>
-      <a class="way" href="#/app/connecteur"><span class="way__ic">${ICON.plug}</span><h3>${t("way.mcp.t")}</h3><p>${t("way.mcp.d")}</p><span class="way__go">${t("way.mcp.cta")}${ICON.arrow}</span></a>
-      <a class="way" href="#/app/nouveau/formulaire"><span class="way__ic">${ICON.files}</span><h3>${t("way.form.t")}</h3><p>${t("way.form.d")}</p><span class="way__go">${t("way.form.cta")}${ICON.arrow}</span></a>
+      <a class="way way--main" href="/app/nouveau"><span class="way__tag">${t("way.reco")}</span><span class="way__ic">${ICON.chat}</span><h3>${t("way.chat.t")}</h3><p>${t("way.chat.d")}</p><span class="way__go">${t("way.chat.cta")}${ICON.arrow}</span></a>
+      <a class="way" href="/app/connecteur"><span class="way__ic">${ICON.plug}</span><h3>${t("way.mcp.t")}</h3><p>${t("way.mcp.d")}</p><span class="way__go">${t("way.mcp.cta")}${ICON.arrow}</span></a>
+      <a class="way" href="/app/nouveau/formulaire"><span class="way__ic">${ICON.files}</span><h3>${t("way.form.t")}</h3><p>${t("way.form.d")}</p><span class="way__go">${t("way.form.cta")}${ICON.arrow}</span></a>
     </div>
   </div></section>`;
 
@@ -114,7 +114,7 @@ const secPreview = (tabs = true) => `
     <div class="kicker">${t("pv.kicker")}</div><h2>${t("pv.title")}</h2><p class="sec__lead">${t("pv.body")}</p>
     ${tabs ? `<div class="tabs" role="tablist" style="margin:32px 0 16px">${SCENARIOS.map((s, i) => `<button type="button" role="tab" aria-selected="${i === 1}" data-scn="${s.id}">${esc(SC_LABEL()[s.id])} · ${esc(s.tool)}</button>`).join("")}</div>` : `<div style="height:32px"></div>`}
     <div id="pv-mock"></div>
-    <p style="margin-top:16px"><a class="btn btn--secondary" href="#/demo">${t("pv.open")}</a></p>
+    <p style="margin-top:16px"><a class="btn btn--secondary" href="/demo">${t("pv.open")}</a></p>
   </div></section>`;
 
 const bindPreview = (root) => {
@@ -145,7 +145,7 @@ const secRoles = () => `
 
 const secRegistry = () => `
   <section class="sec"><div class="wrap split">
-    <div><div class="kicker">${t("reg.kicker")}</div><h2>${t("reg.title")}</h2><p class="sec__lead">${t("reg.body")}</p><p style="margin-top:24px"><a class="btn btn--secondary" href="#/app/registre">${t("reg.open")}</a></p></div>
+    <div><div class="kicker">${t("reg.kicker")}</div><h2>${t("reg.title")}</h2><p class="sec__lead">${t("reg.body")}</p><p style="margin-top:24px"><a class="btn btn--secondary" href="/app/registre">${t("reg.open")}</a></p></div>
     <div><div id="reg-mini"><span class="sk" style="height:180px"></span></div><p class="note">${t("reg.live")}</p></div>
   </div></section>`;
 
@@ -167,13 +167,13 @@ const secLimits = (tint = true, items = [1, 2, 3, 4, 5]) => `
 const secCta = () => `
   <section class="sec sec--navy"><div class="wrap">
     <div class="kicker">${t("cta.kicker")}</div><h2>${t("cta.title")}</h2><p class="sec__lead">${t("cta.body")}</p>
-    <div class="cta-band"><a class="btn btn--light btn--lg" href="#/app/nouveau">${t("way.chat.cta")}</a><a class="btn btn--outline-light btn--lg" href="#/demo">${t("cta.demo")}</a><a class="btn btn--outline-light btn--lg" href="#/app/connecteur">${t("cta.mcp")}</a></div>
+    <div class="cta-band"><a class="btn btn--light btn--lg" href="/app/nouveau">${t("way.chat.cta")}</a><a class="btn btn--outline-light btn--lg" href="/demo">${t("cta.demo")}</a><a class="btn btn--outline-light btn--lg" href="/app/connecteur">${t("cta.mcp")}</a></div>
   </div></section>`;
 
 const secMore = (current) => `
   <section class="sec"><div class="wrap">
     <div class="kicker">${t("more.kicker")}</div>
-    <div class="more">${PAGES.filter(([k]) => k !== current).map(([k, title, d]) => `<a href="#/${k}"><strong>${t(title)}</strong><span>${t(d)}</span><span class="more__go">${ICON.arrow}</span></a>`).join("")}</div>
+    <div class="more">${PAGES.filter(([k]) => k !== current).map(([k, title, d]) => `<a href="/${k}"><strong>${t(title)}</strong><span>${t(d)}</span><span class="more__go">${ICON.arrow}</span></a>`).join("")}</div>
   </div></section>`;
 
 function done(root) { bindPreview(root); bindRegistry(root); window.scrollTo(0, 0); }
@@ -258,7 +258,7 @@ export function renderSecurity(root) {
     </div></section>
     ${secLimits(true, [3, 4, 5])}
     <section class="sec"><div class="wrap split">
-      <div><div class="kicker">${t("secp.data.kicker")}</div><h2>${t("secp.data.title")}</h2><p style="margin-top:24px"><a class="btn btn--secondary" href="#/confidentialite">${t("secp.data.link")}</a></p></div>
+      <div><div class="kicker">${t("secp.data.kicker")}</div><h2>${t("secp.data.title")}</h2><p style="margin-top:24px"><a class="btn btn--secondary" href="/confidentialite">${t("secp.data.link")}</a></p></div>
       <ul class="facts">${[1, 2, 3, 4].map((i) => `<li>${t(`secp.data.${i}`)}</li>`).join("")}</ul>
     </div></section>
     ${secMore("securite")}${secCta()}`, "securite");
@@ -271,7 +271,7 @@ function realContracts(el) {
     const seen = new Set();
     const rows = dossiers.filter((x) => x.statut === "termine" && x.mode === "claude" && !tools.has(x.outil) && x.mots > 800 && !/test/i.test(x.outil)).filter((x) => { const k = `${x.outil}|${x.fournisseur}`; if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 8);
     el.innerHTML = rows.length ? `<div class="card tablewrap"><table class="table"><thead><tr><th>${t("tbl.tool")}</th><th>${t("tbl.vendor")}</th><th>${t("tbl.docs")}</th><th>${t("tbl.avis")}</th><th>${t("tbl.level")}</th><th></th></tr></thead><tbody>
-      ${rows.map((x) => `<tr><td><a class="t-tool" href="#/app/dossier/${esc(x.id)}">${esc(x.outil)}</a></td><td>${esc(x.fournisseur)}</td><td class="muted">${fmtInt(x.mots)} ${t("d.words")}</td><td>${avisPill(x.verdict)}</td><td class="num">${x.score}</td><td><a href="#/app/dossier/${esc(x.id)}">${t("tbl.open")}</a></td></tr>`).join("")}
+      ${rows.map((x) => `<tr><td><a class="t-tool" href="/app/dossier/${esc(x.id)}">${esc(x.outil)}</a></td><td>${esc(x.fournisseur)}</td><td class="muted">${fmtInt(x.mots)} ${t("d.words")}</td><td>${avisPill(x.verdict)}</td><td class="num">${x.score}</td><td><a href="/app/dossier/${esc(x.id)}">${t("tbl.open")}</a></td></tr>`).join("")}
     </tbody></table></div>` : `<p class="muted">${t("tbl.empty")}</p>`;
   }).catch(() => { el.innerHTML = `<p class="err">${t("tbl.error")}</p>`; });
 }
@@ -286,7 +286,7 @@ export async function runScenario(id, mode, btn) {
     documents: [{ nom, format: "MD", taille: new Blob([s.contract]).size, mots: countWords(s.contract) }], mode,
   };
   if (btn) btn.disabled = true;
-  try { const { dossier } = await api("/examens", payload); location.hash = `#/app/en-cours/${dossier.id}`; }
+  try { const { dossier } = await api("/examens", payload); go(`/app/en-cours/${dossier.id}`); }
   catch (e) { toast(e.message, "err"); if (btn) btn.disabled = false; }
 }
 
@@ -327,9 +327,9 @@ export function renderDemo(root) {
 
       <h2 class="h-sub">${t("demo.other.title")}</h2>
       <div class="list-links">
-        <a href="#/app/nouveau"><strong>${t("demo.other.chat")}</strong><span>${t("demo.other.chat.d")}</span></a>
-        <a href="#/app/nouveau/formulaire"><strong>${t("demo.other.form")}</strong><span>${t("demo.other.form.d")}</span></a>
-        <a href="#/app/connecteur"><strong>${t("demo.other.mcp")}</strong><span>${t("demo.other.mcp.d")}</span></a>
+        <a href="/app/nouveau"><strong>${t("demo.other.chat")}</strong><span>${t("demo.other.chat.d")}</span></a>
+        <a href="/app/nouveau/formulaire"><strong>${t("demo.other.form")}</strong><span>${t("demo.other.form.d")}</span></a>
+        <a href="/app/connecteur"><strong>${t("demo.other.mcp")}</strong><span>${t("demo.other.mcp.d")}</span></a>
       </div>
     </div>`);
   root.querySelectorAll("[data-run]").forEach((b) => b.addEventListener("click", () => runScenario(b.dataset.run, b.dataset.mode, b)));
@@ -381,11 +381,11 @@ const LEGAL = {
 export function renderLegal(root, key) {
   const p = LEGAL[key];
   document.title = `${p.titre}, Aucteva`;
-  siteLayout(root, `<div class="wrap page"><article class="legal"><div class="page__head"><h1>${p.titre}</h1>${getLang() === "en" ? `<p>This page is available in French only.</p>` : ""}</div>${p.corps}<p style="margin-top:32px"><a class="btn btn--secondary" href="#/">${t("nf.home")}</a></p></article></div>`);
+  siteLayout(root, `<div class="wrap page"><article class="legal"><div class="page__head"><h1>${p.titre}</h1>${getLang() === "en" ? `<p>This page is available in French only.</p>` : ""}</div>${p.corps}<p style="margin-top:32px"><a class="btn btn--secondary" href="/">${t("nf.home")}</a></p></article></div>`);
   window.scrollTo(0, 0);
 }
 
 export function renderNotFound(root) {
   document.title = `${t("nf.title")}, Aucteva`;
-  siteLayout(root, `<div class="wrap page"><div class="page__head"><h1>${t("nf.title")}</h1><p>${t("nf.body")}</p></div><p><a class="btn" href="#/">${t("nf.home")}</a> <a class="btn btn--secondary" href="#/app/registre">${t("app.registry")}</a></p></div>`);
+  siteLayout(root, `<div class="wrap page"><div class="page__head"><h1>${t("nf.title")}</h1><p>${t("nf.body")}</p></div><p><a class="btn" href="/">${t("nf.home")}</a> <a class="btn btn--secondary" href="/app/registre">${t("app.registry")}</a></p></div>`);
 }

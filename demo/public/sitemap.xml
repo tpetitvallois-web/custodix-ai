@@ -1,4 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://aucteva.pages.dev/</loc><lastmod>2026-11-06</lastmod></url>
+  <url><loc>https://aucteva.pages.dev/produit</loc><lastmod>2026-11-06</lastmod></url>
+  <url><loc>https://aucteva.pages.dev/fonctionnement</loc><lastmod>2026-11-06</lastmod></url>
+  <url><loc>https://aucteva.pages.dev/cas-usage</loc><lastmod>2026-11-06</lastmod></url>
+  <url><loc>https://aucteva.pages.dev/securite</loc><lastmod>2026-11-06</lastmod></url>
+  <url><loc>https://aucteva.pages.dev/demo</loc><lastmod>2026-11-06</lastmod></url>
+  <url><loc>https://aucteva.pages.dev/app/connecteur</loc><lastmod>2026-11-06</lastmod></url>
+  <url><loc>https://aucteva.pages.dev/conditions</loc><lastmod>2026-11-06</lastmod></url>
+  <url><loc>https://aucteva.pages.dev/confidentialite</loc><lastmod>2026-11-06</lastmod></url>
 </urlset>

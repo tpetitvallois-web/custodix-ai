@@ -13,6 +13,8 @@ const PONT_ONLINE = 45 * 1000;
 const CHUNK = 40_000; // caractères par tranche de contrat stockée // le pont est « en ligne » s'il a interrogé la file depuis moins de 45 s
 
 const PUBLIC_HOST = "aucteva.pages.dev"; // projet Pages « aucteva » (demo/pages), relais vers ce Worker
+// Adresses servies par la page de l'application (routage dans le navigateur). Le reste suit les fichiers, ou la page 404.
+const PAGE_ROUTE = /^\/(?:(?:produit|fonctionnement|cas-usage|securite|demo|conditions|confidentialite|analyse|registre|connecteur)\/?|(?:rapport|en-cours|conversation)\/[A-Za-z0-9-]+\/?|app(?:\/[A-Za-z0-9-]+)*\/?)$/;
 const OLD_HOSTS = new Set(["custodix-ai.gererseul-avis-worker.workers.dev", "aucteva.gererseul-avis-worker.workers.dev"]);
 const QUOTA_IP = 60; // lectures par adresse et par jour (un jury derrière une même adresse doit pouvoir tester)
 const QUOTA_JOUR = 400; // lectures par jour, toutes adresses confondues
@@ -465,9 +467,12 @@ export default {
       return handleMcp(request, { registre, env, base: url.origin, cleanInput, declencherGitHub, quota });
     }
     if (!url.pathname.startsWith("/api/")) {
-      if (url.pathname === "/" && request.method === "GET" && (request.headers.get("accept") || "").includes("text/html") && !/bot|crawl|spider|preview|headless/i.test(request.headers.get("user-agent") || "")) {
+      // Pages du site et de l'application : même page HTML, le routeur du navigateur affiche l'écran demandé.
+      const page = url.pathname === "/" || PAGE_ROUTE.test(url.pathname);
+      if (page && request.method === "GET" && (request.headers.get("accept") || "").includes("text/html") && !/bot|crawl|spider|preview|headless/i.test(request.headers.get("user-agent") || "")) {
         ctx.waitUntil(env.REGISTRE.get(env.REGISTRE.idFromName("principal")).visite().catch(() => {}));
       }
+      if (page && url.pathname !== "/") return avecEntetes(await env.ASSETS.fetch(new Request(new URL("/", url), request)));
       return avecEntetes(await env.ASSETS.fetch(request));
     }
     const registre = env.REGISTRE.get(env.REGISTRE.idFromName("principal"));

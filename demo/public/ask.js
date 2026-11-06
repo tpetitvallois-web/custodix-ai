@@ -1,7 +1,7 @@
 // Barre de l'assistant : une question libre, un contrat en pièce jointe, des exemples qui défilent dans le champ.
 // Chaque exemple joint un vrai document : le contrat d'un scénario, ou un contrat réel déjà lu et gardé au registre.
 import { t, getLang } from "./i18n.js";
-import { api, esc, fmtInt, countWords, ICON, toast, slug } from "./ui.js";
+import { api, esc, fmtInt, countWords, ICON, toast, slug, go } from "./ui.js";
 import { readFile } from "./files.js";
 import { SCENARIOS } from "./scenarios.js";
 
@@ -24,7 +24,7 @@ const reduced = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").ma
 export async function startConversation(text, pieces) {
   const { conversation } = await api("/conversations", {});
   await api(`/conversations/${conversation.id}/messages`, { text, pieces });
-  location.hash = `#/app/conversation/${conversation.id}`;
+  go(`/app/conversation/${conversation.id}`);
 }
 
 async function examplePiece(ex) {

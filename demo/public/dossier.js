@@ -1,6 +1,6 @@
 // Dossier d'analyse : document source et analyse côte à côte, dossier de synthèse, validation juridique et décision d'utilisation.
 import { t, getLang } from "./i18n.js";
-import { api, esc, fmtInt, fmtDay, ICON, avisPill, decisionPill, stagePill, dimensionsOf, constatsOf, statusKey, CLAUSE, clausePill, copy, toast, session, slug } from "./ui.js";
+import { api, esc, fmtInt, fmtDay, ICON, avisPill, decisionPill, stagePill, dimensionsOf, constatsOf, statusKey, CLAUSE, clausePill, copy, toast, session, slug, go } from "./ui.js";
 import { shellLayout, invalidate } from "./shell.js";
 import { avenant, MENTION, TOPICS } from "./engine.js";
 import { fold, locate, renderDoc, sectionOf, scrollWithin } from "./doc.js";
@@ -23,17 +23,17 @@ export async function renderDossier(root, id, tab = "analyse") {
   if (cur.id !== id || !cur.d) {
     v.innerHTML = `<div class="ws__head"><span class="sk" style="width:240px;height:22px"></span><div style="height:80px"></div></div><div class="ws__body"><span class="sk" style="height:300px"></span></div>`;
     try { const r = await load(id); if (!r.d) throw new Error(L("Dossier introuvable.", "File not found.")); cur = { id, ...r }; }
-    catch (e) { v.innerHTML = `<div class="main"><div class="err">${esc(e.message)}</div><p style="margin-top:12px"><a class="btn" href="#/app/dossiers">${t("app.assessments")}</a></p></div>`; return; }
+    catch (e) { v.innerHTML = `<div class="main"><div class="err">${esc(e.message)}</div><p style="margin-top:12px"><a class="btn" href="/app/dossiers">${t("app.assessments")}</a></p></div>`; return; }
   }
   const d = cur.d;
-  if (d.statut !== "termine") { location.hash = `#/app/en-cours/${id}`; return; }
+  if (d.statut !== "termine") { go(`/app/en-cours/${id}`); return; }
   const r = d.resultat, m = r.meta;
   document.title = `${m.outil}, ${d.id}, Aucteva`;
-  const base = `#/app/dossier/${d.id}`;
+  const base = `/app/dossier/${d.id}`;
   const done = (x) => (x ? "is-done" : "is-todo");
   v.innerHTML = `
     <div class="ws__head no-print">
-      <div class="crumbs"><a href="#/app/dossiers">${t("app.assessments")}</a> / <span class="mono">${esc(d.id)}</span></div>
+      <div class="crumbs"><a href="/app/dossiers">${t("app.assessments")}</a> / <span class="mono">${esc(d.id)}</span></div>
       <div class="ws__top">
         <div><h1>${esc(m.outil)}</h1><div class="ws__vendor">${esc(m.fournisseur)}${d.input.departement ? ` · ${esc(d.input.departement)}` : ""}${d.input.responsable ? ` · ${esc(d.input.responsable)}` : ""}</div>
           <div class="ws__meta">${stagePill(d)}${avisPill(r.verdict)}<span class="pill pill--neutral">${t("ws.vigilance")} ${r.score} / 100</span>${r.lecture?.citations?.total ? `<span class="pill pill--neutral">${r.lecture.citations.verifiees} / ${r.lecture.citations.total} ${t("ws.cites")}</span>` : ""}</div></div>
@@ -51,8 +51,8 @@ export async function renderDossier(root, id, tab = "analyse") {
       </nav>
     </div>
     <div class="ws__body" id="wsb"></div>`;
-  v.querySelector("[data-a=link]").addEventListener("click", () => copy(`${location.origin}/${base}`));
-  v.querySelector("[data-a=print]").addEventListener("click", () => { if (tab !== "synthese") { location.hash = `${base}/synthese`; setTimeout(() => window.print(), 600); } else window.print(); });
+  v.querySelector("[data-a=link]").addEventListener("click", () => copy(`${location.origin}${base}`));
+  v.querySelector("[data-a=print]").addEventListener("click", () => { if (tab !== "synthese") { go(`${base}/synthese`); setTimeout(() => window.print(), 600); } else window.print(); });
   const body = v.querySelector("#wsb");
   if (tab === "synthese") return paintSummary(body, d);
   if (tab === "decision") return paintDecision(body, d, () => renderDossier(root, id, "decision"));
@@ -130,7 +130,7 @@ function paintAnalysis(body, d, texte) {
         <section class="card"><div class="card__head"><h2>${t("ws.conditions")}</h2></div><div class="card__body">${r.conditions.length ? `<ul class="blist">${r.conditions.map((c) => `<li>${esc(c)}</li>`).join("")}</ul>` : `<p class="muted" style="margin:0">${L("Aucune condition : l'outil n'est pas autorisé en l'état.", "No conditions: the tool is not approved as is.")}</p>`}</div></section>
         <section class="card"><div class="card__head"><h2>${t("ws.human")}</h2><span class="pill pill--info">${human.length}</span></div><div class="card__body">${human.length ? `<ul class="blist">${human.map((h) => `<li>${esc(h)}</li>`).join("")}</ul>` : `<p class="muted" style="margin:0">${L("Aucun point ouvert relevé. La validation de l'avocat reste requise.", "No open point found. The lawyer's approval is still required.")}</p>`}</div></section>
         ${L2?.observations?.length ? `<section class="card"><div class="card__head"><h2>${t("ws.observations")}</h2><span class="small muted">${esc(L2.type_document || "")}${L2.langue ? `, ${esc(L2.langue)}` : ""}</span></div><div class="card__body"><ul class="blist">${L2.observations.map((o) => `<li>${esc(o)}</li>`).join("")}</ul></div></section>` : ""}
-        <p class="small" style="margin:0"><a class="btn" href="#/app/dossier/${esc(d.id)}/decision">${d.validation ? t("ws.decision") : t("val.submit")}</a></p>
+        <p class="small" style="margin:0"><a class="btn" href="/app/dossier/${esc(d.id)}/decision">${d.validation ? t("ws.decision") : t("val.submit")}</a></p>
       </div>
     </div>`;
 

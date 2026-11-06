@@ -93,7 +93,7 @@ function avisTexte(d, base) {
   out.push("", "Mesures recommandées :", ...r.actions.map((a, i) => `${i + 1}. ${a}`));
   if (r.clauses_correctives.length) out.push("", "Clauses correctives proposées :", ...r.clauses_correctives.map((c) => `- ${c.sujet} : ${c.texte}`));
   out.push("", d.validation ? `Validé par ${d.validation.nom}, ${d.validation.role}, le ${d.validation.when} (signature ${d.validation.hash}).` : "En attente de validation par un avocat.");
-  out.push(r.mention, `Dossier complet : ${base}/#/rapport/${d.id}`);
+  out.push(r.mention, `Dossier complet : ${base}/app/dossier/${d.id}`);
   return out.join("\n");
 }
 
@@ -115,7 +115,7 @@ async function callTool(name, args, ctx) {
     const d = await registre.creer(clean, mode, !!env.ANTHROPIC_API_KEY);
     if (mode === "claude" && !env.ANTHROPIC_API_KEY) await ctx.declencherGitHub(env, d.id);
     if (mode === "regles") return text(avisTexte(d, base));
-    if (mode === "claude") return text(`Dossier ${d.id} ouvert. Le lecteur de Aucteva lit le contrat (${clean.contract.split(/\s+/).length} mots), compte une à trois minutes. Consulte ensuite le dossier avec consulter_dossier, id ${d.id}. Page : ${base}/#/rapport/${d.id}`);
+    if (mode === "claude") return text(`Dossier ${d.id} ouvert. Le lecteur de Aucteva lit le contrat (${clean.contract.split(/\s+/).length} mots), compte une à trois minutes. Consulte ensuite le dossier avec consulter_dossier, id ${d.id}. Page : ${base}/app/dossier/${d.id}`);
     return text([
       `Dossier ${d.id} ouvert pour ${clean.tool} (${clean.vendor}). Lis maintenant le contrat que tu as transmis, puis appelle deposer_lecture avec l'id ${d.id}.`,
       "", "Consigne de lecture :", SYSTEM, "", "Sujets à qualifier :", sujetsTexte(),

@@ -1,6 +1,6 @@
 // Ouverture d'un dossier : parcours guidé (description, documents), suivi de l'analyse, conversation avec l'assistant.
 import { t, getLang } from "./i18n.js";
-import { api, esc, fmtInt, fmtSize, countWords, ICON, toast, session, avisPill, slug } from "./ui.js";
+import { api, esc, fmtInt, fmtSize, countWords, ICON, toast, session, avisPill, slug, go } from "./ui.js";
 import { shellLayout, invalidate } from "./shell.js";
 import { analyse } from "./engine.js";
 import { SCENARIOS, CATEGORIES } from "./scenarios.js";
@@ -24,9 +24,9 @@ const ext = (n) => (n.split(".").pop() || "").toUpperCase().slice(0, 5);
 function newHead(v, tab) {
   return `<div class="ph"><div><h1>${t("new.title")}</h1><p>${t("new.sub")}</p></div></div>
     <div class="tabs" role="tablist" style="margin-bottom:20px">
-      <a href="#/app/nouveau" role="tab" aria-selected="${tab === "chat"}">${ICON.chat}${t("new.tab.chat")}</a>
-      <a href="#/app/connecteur" role="tab" aria-selected="false">${ICON.plug}${t("new.tab.mcp")}</a>
-      <a href="#/app/nouveau/formulaire" role="tab" aria-selected="${tab === "guided"}">${ICON.files}${t("new.tab.guided")}</a>
+      <a href="/app/nouveau" role="tab" aria-selected="${tab === "chat"}">${ICON.chat}${t("new.tab.chat")}</a>
+      <a href="/app/connecteur" role="tab" aria-selected="false">${ICON.plug}${t("new.tab.mcp")}</a>
+      <a href="/app/nouveau/formulaire" role="tab" aria-selected="${tab === "guided"}">${ICON.files}${t("new.tab.guided")}</a>
     </div>`;
 }
 const stepper = (n) => `<ol class="stepper">${[1, 2, 3, 4].map((i) => `<li class="${i === n ? "is-on" : i < n ? "is-done" : ""}"${i === n ? ' aria-current="step"' : ""}><span class="d">${i < n ? ICON.check : i}</span><span class="t">${t(`new.s${i}`)}</span></li>`).join("")}</ol>`;
@@ -35,7 +35,7 @@ export function renderNew(root, sub) {
   document.title = `${t("app.new")}, Aucteva`;
   const v = shellLayout(root, "new");
   if (sub !== "formulaire") return renderChatStart(v);
-  if (!etat) api("/etat").then((e) => { etat = e; if (draft.step === 2 && location.hash.startsWith("#/app/nouveau")) paint(); }).catch(() => { etat = { lecture: null }; });
+  if (!etat) api("/etat").then((e) => { etat = e; if (draft.step === 2 && location.pathname.startsWith("/app/nouveau")) paint(); }).catch(() => { etat = { lecture: null }; });
   const paint = () => { v.innerHTML = newHead(v, "guided") + stepper(draft.step) + (draft.step === 1 ? step1() : step2()); (draft.step === 1 ? bind1 : bind2)(v, paint); window.scrollTo(0, 0); };
   paint();
 }
@@ -167,7 +167,7 @@ function bind2(v, paint) {
     try {
       const { dossier } = await api("/examens", payload);
       invalidate(); draft = blank(); save();
-      location.hash = `#/app/en-cours/${dossier.id}`;
+      go(`/app/en-cours/${dossier.id}`);
     } catch (x) {
       if (draft.mode === "claude") { err.textContent = x.message; go.disabled = false; return; }
       // Service indisponible : le moteur de règles tourne dans le navigateur.
@@ -175,7 +175,7 @@ function bind2(v, paint) {
       const { contract: c, mode, ...meta } = payload;
       const d = { id, mode: "regles", statut: "termine", cree: Date.now(), maj: Date.now(), input: { ...meta, contrat_mots: countWords(c) }, resultat: analyse(payload, { moteur: "règles v1 (navigateur)" }), validation: null, decision: null, local: true, texte: c };
       session.set(`aucteva.local.${id}`, d); draft = blank(); save();
-      location.hash = `#/app/dossier/${id}`;
+      go(`/app/dossier/${id}`);
     }
   });
   paintFiles();
@@ -216,7 +216,7 @@ export async function renderProgress(root, id) {
     paintSteps(steps.length, rules ? {} : { 4: L2?.citations ? `${L2.citations.verifiees} / ${L2.citations.total} ${t("ws.cites")}` : "" });
     const fill = v.querySelector("#fill"); if (fill) fill.style.width = "100%";
     invalidate();
-    timers.push(setTimeout(() => { location.hash = `#/app/dossier/${dd.id}`; }, rules ? 900 : 1400));
+    timers.push(setTimeout(() => { go(`/app/dossier/${dd.id}`); }, rules ? 900 : 1400));
   };
   if (d.statut === "termine") { finish(d); return; }
   const tick = () => {
@@ -230,8 +230,8 @@ export async function renderProgress(root, id) {
     if (d.statut === "termine") return finish(d);
     if (d.statut === "erreur") {
       clearTimers();
-      v.querySelector("#perr").innerHTML = `<p class="err" style="margin-top:16px">${t("pg.fail")} : ${esc(d.erreur || "")}</p><div style="display:flex;gap:8px;margin-top:12px"><button type="button" class="btn" id="rr">${t("pg.retryRules")}</button><a class="btn btn--secondary" href="#/app/nouveau/formulaire">${t("pg.edit")}</a></div>`;
-      v.querySelector("#rr").addEventListener("click", async () => { try { const c = (await api(`/examens/${id}/contrat`)).texte; const i = d.input; const r = await api("/examens", { tool: i.tool, vendor: i.vendor, category: i.category, useCase: i.useCase, dataTypes: i.dataTypes, countries: i.countries, users: i.users, contract: c, source: i.source, departement: i.departement, usage: i.usage, responsable: i.responsable, documents: i.documents, mode: "regles" }); location.hash = `#/app/en-cours/${r.dossier.id}`; } catch (e) { toast(e.message, "err"); } });
+      v.querySelector("#perr").innerHTML = `<p class="err" style="margin-top:16px">${t("pg.fail")} : ${esc(d.erreur || "")}</p><div style="display:flex;gap:8px;margin-top:12px"><button type="button" class="btn" id="rr">${t("pg.retryRules")}</button><a class="btn btn--secondary" href="/app/nouveau/formulaire">${t("pg.edit")}</a></div>`;
+      v.querySelector("#rr").addEventListener("click", async () => { try { const c = (await api(`/examens/${id}/contrat`)).texte; const i = d.input; const r = await api("/examens", { tool: i.tool, vendor: i.vendor, category: i.category, useCase: i.useCase, dataTypes: i.dataTypes, countries: i.countries, users: i.users, contract: c, source: i.source, departement: i.departement, usage: i.usage, responsable: i.responsable, documents: i.documents, mode: "regles" }); go(`/app/en-cours/${r.dossier.id}`); } catch (e) { toast(e.message, "err"); } });
       return;
     }
     const running = d.statut === "en_cours" || d.statut === "en_cours_api";
@@ -281,8 +281,8 @@ function renderChatStart(v) {
   v.innerHTML = newHead(v, "chat") + `<section class="newask"><h2>${t("ov.ask")}</h2><div id="nask"></div></section>
     <h2 class="h-sub">${t("new.alt")}</h2>
     <div class="list-links list-links--2">
-      <a href="#/app/connecteur"><strong>${t("way.mcp.t")}</strong><span>${t("way.mcp.d")}</span></a>
-      <a href="#/app/nouveau/formulaire"><strong>${t("way.form.t")}</strong><span>${t("way.form.d")}</span></a>
+      <a href="/app/connecteur"><strong>${t("way.mcp.t")}</strong><span>${t("way.mcp.d")}</span></a>
+      <a href="/app/nouveau/formulaire"><strong>${t("way.form.t")}</strong><span>${t("way.form.d")}</span></a>
     </div>`;
   askBar(v.querySelector("#nask"), { tone: "light", chips: 8, autofocus: true });
 }
@@ -292,8 +292,8 @@ export async function renderConversation(root, id) {
   const v = shellLayout(root, "new");
   let c;
   try { c = (await api(`/conversations/${id}`)).conversation; }
-  catch (e) { v.innerHTML = `<div class="err">${esc(e.message)}</div><p style="margin-top:12px"><a class="btn" href="#/app/nouveau">${t("conv.new")}</a></p>`; return; }
-  v.innerHTML = `<div class="ph"><div><div class="crumbs"><a href="#/app/nouveau">${t("new.tab.chat")}</a> / <span class="mono">${esc(id)}</span></div><h1 id="ct"></h1></div><a class="btn btn--secondary" href="#/app/nouveau">${t("conv.new")}</a></div>
+  catch (e) { v.innerHTML = `<div class="err">${esc(e.message)}</div><p style="margin-top:12px"><a class="btn" href="/app/nouveau">${t("conv.new")}</a></p>`; return; }
+  v.innerHTML = `<div class="ph"><div><div class="crumbs"><a href="/app/nouveau">${t("new.tab.chat")}</a> / <span class="mono">${esc(id)}</span></div><h1 id="ct"></h1></div><a class="btn btn--secondary" href="/app/nouveau">${t("conv.new")}</a></div>
     <div class="chat"><div class="chat__list" id="cl" aria-live="polite"></div>${composer(t("conv.reply"))}</div>`;
   const list = v.querySelector("#cl");
   let at = Date.now();
@@ -302,7 +302,7 @@ export async function renderConversation(root, id) {
     v.querySelector("#ct").textContent = c.dossier?.outil ? `${c.dossier.outil}${c.dossier.fournisseur ? `, ${c.dossier.fournisseur}` : ""}` : L("Examen d'un outil d'IA", "AI tool review");
     list.innerHTML = c.messages.map((m) => `<div class="msg msg--${m.role === "user" ? "user" : "assistant"}"><div class="msg__text">${esc(m.text)}</div>
       ${m.pieces?.length ? `<div class="msg__pieces">${m.pieces.map((p) => `<span class="chip">${esc(p.nom)}, ${fmtInt(p.mots)} ${t("d.words")}</span>`).join("")}</div>` : ""}
-      ${m.dossier ? `<a class="dcard" href="#/app/dossier/${esc(m.dossier.id)}">${avisPill(m.dossier.verdict)}<span class="muted small">${t("ws.vigilance")} ${m.dossier.score} / 100</span><span class="go">${t("tbl.open")} ${esc(m.dossier.id)}${ICON.arrow}</span></a>` : ""}</div>`).join("")
+      ${m.dossier ? `<a class="dcard" href="/app/dossier/${esc(m.dossier.id)}">${avisPill(m.dossier.verdict)}<span class="muted small">${t("ws.vigilance")} ${m.dossier.score} / 100</span><span class="go">${t("tbl.open")} ${esc(m.dossier.id)}${ICON.arrow}</span></a>` : ""}</div>`).join("")
       + (busy() ? `<div class="msg msg--assistant"><span class="wait"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span id="cw">${c.pieces.length ? L("Lecture en cours", "Reading") : L("Réponse en cours", "Replying")}</span></span></div>` : "")
       + (c.statut === "erreur" ? `<div class="msg msg--assistant"><div class="msg__text">${L("La réponse a échoué", "The reply failed")} : ${esc(c.erreur || "")}. ${L("Renvoyez votre message.", "Send your message again.")}</div></div>` : "");
     v.querySelector("#cs").disabled = busy(); v.querySelector("#ci").disabled = busy();
