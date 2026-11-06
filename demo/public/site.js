@@ -349,12 +349,27 @@ const LEGAL = {
       <h2>Ce que vous déposez</h2>
       <p>Les dossiers sont visibles dans le registre public de la démonstration. Ne déposez ni document confidentiel, ni donnée personnelle, ni contrat couvert par un accord de confidentialité. Utilisez des conditions publiées en ligne ou des documents anonymisés.</p>
       <p>Vous restez responsable des documents que vous transmettez et devez avoir le droit de les partager.</p>
+      <h2>Vos documents et vos avis</h2>
+      <p>Vous restez titulaire des documents que vous déposez et des avis, synthèses et avenants produits pour vos dossiers. L'équipe Aucteva ne revendique aucun droit sur ces documents ni sur ces résultats.</p>
+      <p>L'équipe Aucteva s'interdit d'utiliser vos documents, messages et résultats pour entraîner, affiner ou améliorer un modèle d'intelligence artificielle, le sien ou celui d'un tiers. Chez le fournisseur du modèle de langage, l'utilisation des textes transmis pour l'amélioration de ses modèles est désactivée.</p>
+      <h2>Conservation et suppression</h2>
+      <p>Les dossiers, conversations et documents sont supprimés au plus tard le 31 décembre 2026. Sur simple demande, un dossier est supprimé dans les 30 jours.</p>
+      <h2>Sécurité</h2>
+      <p>Les données sont chiffrées en transit, par une connexion HTTPS imposée, et au repos, par l'hébergeur. Aucune clé n'est exposée dans le navigateur. Le lecteur des contrats n'accède au registre qu'avec un jeton secret. Les adresses IP sont réduites à une empreinte renouvelée chaque jour.</p>
+      <h2>Incidents</h2>
+      <p>L'équipe Aucteva notifie toute violation de données dans un délai de 72 heures après sa découverte : par une annonce sur le site, directement aux personnes dont elle connaît le contact et, si la loi l'exige, à la CNIL.</p>
+      <h2>Audit</h2>
+      <p>Une fois par an et après tout incident, vous pouvez auditer ou faire auditer le service : sur demande, l'équipe Aucteva donne accès à son code source et à l'historique de vos dossiers.</p>
+      <h2>Responsabilité</h2>
+      <p>L'équipe Aucteva répond de ses manquements dans les conditions du droit commun. Aucune limitation de responsabilité ne s'applique aux manquements touchant la confidentialité, la sécurité ou les données personnelles.</p>
       <h2>Validation et décision</h2>
       <p>Dans la démonstration, l'identité déclarée lors d'une validation ou d'une décision n'est pas vérifiée. Ces enregistrements illustrent le fonctionnement du registre et n'engagent personne.</p>
       <h2>Usage raisonnable</h2>
       <p>Le nombre de lectures est limité par adresse et par jour. Toute tentative de saturer le service ou de détourner l'assistant de sa mission peut entraîner le blocage de l'accès.</p>
       <h2>Disponibilité</h2>
-      <p>Le service est fourni en l'état, sans garantie de disponibilité. Il peut être modifié ou arrêté à tout moment.</p>`,
+      <p>Le service peut être interrompu pour maintenance. En cas d'arrêt définitif, les utilisateurs en sont informés sur le site 30 jours avant et peuvent exporter leurs dossiers en PDF.</p>
+      <h2>Modifications</h2>
+      <p>Les conditions applicables à un dossier sont celles en vigueur à son ouverture. Aucune modification ne s'applique à un dossier existant sans votre accord exprès.</p>`,
   },
   confidentialite: {
     titre: "Données personnelles",
@@ -371,8 +386,10 @@ const LEGAL = {
       <p>Ces données servent à préparer l'avis demandé et à tenir le registre de la démonstration. La base légale est l'intérêt légitime à faire fonctionner le service que vous utilisez. Aucune donnée n'est vendue ni utilisée à des fins publicitaires.</p>
       <h2>Destinataires et hébergement</h2>
       <p>Le site et le registre sont hébergés par Cloudflare. La lecture des contrats est confiée au modèle de langage d'un fournisseur tiers. Le texte lui est transmis depuis un ordinateur de l'équipe Aucteva ou, en secours, depuis l'infrastructure de GitHub. Ne transmettez donc aucune donnée personnelle dans les contrats ou les messages. Ces prestataires peuvent traiter des données hors de l'Union européenne, dans le cadre des clauses contractuelles types de la Commission européenne.</p>
+      <h2>Sous-traitants</h2>
+      <p>Cloudflare héberge le site et le registre. Le fournisseur du modèle de langage lit les contrats. GitHub sert à la lecture de secours. Tout nouveau sous-traitant est annoncé sur cette page 30 jours avant d'intervenir. Vous pouvez vous y opposer en demandant la suppression de vos dossiers.</p>
       <h2>Durée de conservation</h2>
-      <p>Les dossiers et conversations sont conservés pendant la durée du concours Make AI Happen 2026, puis supprimés.</p>
+      <p>Les dossiers et conversations sont supprimés au plus tard le 31 décembre 2026, après la finale du concours Make AI Happen. Sur simple demande, un dossier est supprimé dans les 30 jours.</p>
       <h2>Vos droits</h2>
       <p>Vous disposez d'un droit d'accès, de rectification, d'effacement, d'opposition et de limitation. Pour l'exercer ou faire retirer un dossier, contactez l'équipe Aucteva sur la plateforme du concours Make AI Happen. Vous pouvez aussi saisir la CNIL (cnil.fr).</p>`,
   },
