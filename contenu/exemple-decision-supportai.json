@@ -1,0 +1,250 @@
+{
+  "meta": {
+    "outil": "SupportAI",
+    "fournisseur": "Nimbus Dialog Inc.",
+    "categorie": "support",
+    "cas_usage": "Chatbot de premier niveau sur le site et dans l'application mobile, entraîné sur l'historique des conversations du service client pour répondre aux questions sur les commandes, les livraisons et les retours.",
+    "donnees": [
+      "clients"
+    ],
+    "pays": "France, Espagne, Italie",
+    "utilisateurs": 1200,
+    "date": "2026-11-05",
+    "moteur": "règles v1 (démonstrateur)"
+  },
+  "verdict": "ORANGE",
+  "score": 62,
+  "niveau_juridique": "modéré",
+  "resume": [
+    "SupportAI (Nimbus Dialog Inc.) traite des données clients pour le support client : exposition réglementaire modérée.",
+    "10 clauses critiques relevées dans le contrat et 1 clause manquante.",
+    "Autorisation sous conditions (score 62/100) : un avenant est requis avant le déploiement général."
+  ],
+  "risques": [
+    {
+      "gravite": "moyenne",
+      "titre": "Entraînement des modèles sur les données du Client",
+      "detail": "Formulation ambiguë : « Données Client Le Client accorde à Nimbus Dialog le droit d'héberger, de copier, de traiter et d'analyser les Données Client dans la mesure nécessaire pour fournir, maintenir,… »",
+      "base": "RGPD art. 5.1.b (finalité) et art. 28.3.a (instructions documentées)"
+    },
+    {
+      "gravite": "moyenne",
+      "titre": "Durée de conservation et suppression",
+      "detail": "Formulation ambiguë : « Conservation Les journaux de conversation sont conservés aussi longtemps que nécessaire à la fourniture des Services et à l'amélioration de ceux-ci, puis supprimés ou anonymisés… »",
+      "base": "RGPD art. 5.1.e (limitation de la conservation) et art. 28.3.g (suppression ou restitution)"
+    },
+    {
+      "gravite": "moyenne",
+      "titre": "Localisation et transferts hors Union européenne",
+      "detail": "Formulation ambiguë : « Hébergement Les Données Client sont hébergées dans l'Union européenne ou aux États-Unis, selon la configuration choisie lors de la mise en service et les besoins opérationnels de… »",
+      "base": "RGPD art. 44 à 46 (transferts), clauses contractuelles types 2021/914"
+    },
+    {
+      "gravite": "moyenne",
+      "titre": "Sous-traitants ultérieurs",
+      "detail": "Formulation ambiguë : « La liste des sous-traitants ultérieurs est disponible sur demande. »",
+      "base": "RGPD art. 28.2 et 28.4"
+    },
+    {
+      "gravite": "moyenne",
+      "titre": "Notification des violations de données",
+      "detail": "Formulation ambiguë : « En cas d'incident de sécurité affectant les Données Client, Nimbus Dialog en informe le Client dans un délai raisonnable, compte tenu des circonstances. 7. »",
+      "base": "RGPD art. 33.2 (le sous-traitant notifie sans délai) et art. 33.1 (72 heures pour le responsable)"
+    },
+    {
+      "gravite": "moyenne",
+      "titre": "Droit d'audit",
+      "detail": "Formulation ambiguë : « La communication de ce rapport tient lieu de réponse aux demandes d'audit du Client, sauf exigence contraire d'une autorité de contrôle. 8. »",
+      "base": "RGPD art. 28.3.h"
+    },
+    {
+      "gravite": "moyenne",
+      "titre": "Mesures de sécurité et chiffrement",
+      "detail": "Formulation ambiguë : « Sécurité et incidents Nimbus Dialog maintient des mesures de sécurité techniques et organisationnelles raisonnables et conformes aux standards du secteur. »",
+      "base": "RGPD art. 32"
+    },
+    {
+      "gravite": "moyenne",
+      "titre": "Responsabilité du Fournisseur",
+      "detail": "Formulation ambiguë : « Limitation de responsabilité La responsabilité totale de Nimbus Dialog au titre du présent contrat est limitée aux montants payés par le Client au cours des six (6) mois… »",
+      "base": "Code civil, art. 1170 (clause privant de sa substance l'obligation essentielle réputée non écrite)"
+    },
+    {
+      "gravite": "faible",
+      "titre": "Décision automatisée et supervision humaine",
+      "detail": "Formulation ambiguë : « Nimbus Dialog ne garantit pas l'exactitude des réponses et recommande au Client de prévoir une supervision humaine adaptée à son activité. 9. »",
+      "base": "RGPD art. 22 ; AI Act art. 14 (contrôle humain) et art. 26 (obligations du déployeur)"
+    },
+    {
+      "gravite": "faible",
+      "titre": "Modification unilatérale du contrat",
+      "detail": "Formulation ambiguë : « Nimbus Dialog peut modifier les présentes conditions moyennant un préavis de trente (30) jours publié sur son site. 11. »",
+      "base": "Code civil, art. 1193 (le contrat ne se modifie que du consentement mutuel)"
+    }
+  ],
+  "clauses_critiques": [
+    {
+      "sujet": "Entraînement des modèles sur les données du Client",
+      "statut": "ambiguë",
+      "extrait": "Données Client Le Client accorde à Nimbus Dialog le droit d'héberger, de copier, de traiter et d'analyser les Données Client dans la mesure nécessaire pour fournir, maintenir, sécuriser et améliorer les Services.",
+      "base": "RGPD art. 5.1.b (finalité) et art. 28.3.a (instructions documentées)"
+    },
+    {
+      "sujet": "Durée de conservation et suppression",
+      "statut": "ambiguë",
+      "extrait": "Conservation Les journaux de conversation sont conservés aussi longtemps que nécessaire à la fourniture des Services et à l'amélioration de ceux-ci, puis supprimés ou anonymisés conformément aux politiques internes de Nimbus Dialog.",
+      "base": "RGPD art. 5.1.e (limitation de la conservation) et art. 28.3.g (suppression ou restitution)"
+    },
+    {
+      "sujet": "Localisation et transferts hors Union européenne",
+      "statut": "ambiguë",
+      "extrait": "Hébergement Les Données Client sont hébergées dans l'Union européenne ou aux États-Unis, selon la configuration choisie lors de la mise en service et les besoins opérationnels de Nimbus Dialog.",
+      "base": "RGPD art. 44 à 46 (transferts), clauses contractuelles types 2021/914"
+    },
+    {
+      "sujet": "Sous-traitants ultérieurs",
+      "statut": "ambiguë",
+      "extrait": "La liste des sous-traitants ultérieurs est disponible sur demande.",
+      "base": "RGPD art. 28.2 et 28.4"
+    },
+    {
+      "sujet": "Notification des violations de données",
+      "statut": "ambiguë",
+      "extrait": "En cas d'incident de sécurité affectant les Données Client, Nimbus Dialog en informe le Client dans un délai raisonnable, compte tenu des circonstances. 7.",
+      "base": "RGPD art. 33.2 (le sous-traitant notifie sans délai) et art. 33.1 (72 heures pour le responsable)"
+    },
+    {
+      "sujet": "Droit d'audit",
+      "statut": "ambiguë",
+      "extrait": "La communication de ce rapport tient lieu de réponse aux demandes d'audit du Client, sauf exigence contraire d'une autorité de contrôle. 8.",
+      "base": "RGPD art. 28.3.h"
+    },
+    {
+      "sujet": "Mesures de sécurité et chiffrement",
+      "statut": "ambiguë",
+      "extrait": "Sécurité et incidents Nimbus Dialog maintient des mesures de sécurité techniques et organisationnelles raisonnables et conformes aux standards du secteur.",
+      "base": "RGPD art. 32"
+    },
+    {
+      "sujet": "Responsabilité du Fournisseur",
+      "statut": "ambiguë",
+      "extrait": "Limitation de responsabilité La responsabilité totale de Nimbus Dialog au titre du présent contrat est limitée aux montants payés par le Client au cours des six (6) mois précédant l'événement à l'origine de la réclamation.",
+      "base": "Code civil, art. 1170 (clause privant de sa substance l'obligation essentielle réputée non écrite)"
+    },
+    {
+      "sujet": "Décision automatisée et supervision humaine",
+      "statut": "ambiguë",
+      "extrait": "Nimbus Dialog ne garantit pas l'exactitude des réponses et recommande au Client de prévoir une supervision humaine adaptée à son activité. 9.",
+      "base": "RGPD art. 22 ; AI Act art. 14 (contrôle humain) et art. 26 (obligations du déployeur)"
+    },
+    {
+      "sujet": "Modification unilatérale du contrat",
+      "statut": "ambiguë",
+      "extrait": "Nimbus Dialog peut modifier les présentes conditions moyennant un préavis de trente (30) jours publié sur son site. 11.",
+      "base": "Code civil, art. 1193 (le contrat ne se modifie que du consentement mutuel)"
+    }
+  ],
+  "clauses_protectrices": [
+    {
+      "sujet": "Propriété des contenus et résultats générés",
+      "extrait": "Contenus générés Le Client est propriétaire des réponses générées par SupportAI dans son environnement."
+    }
+  ],
+  "clauses_manquantes": [
+    {
+      "sujet": "Transparence sur l'usage de l'IA",
+      "base": "AI Act art. 50 (applicable depuis le 2 août 2026) ; RGPD art. 13 et 14"
+    }
+  ],
+  "obligations": [
+    {
+      "texte": "Conclure un accord de traitement conforme à l'article 28 du RGPD, avec instructions documentées, et inscrire le traitement au registre (art. 30).",
+      "source": "RGPD art. 28 et 30"
+    },
+    {
+      "texte": "Déterminer la base légale et la finalité du traitement, et informer les personnes concernées.",
+      "source": "RGPD art. 6, 13 et 14"
+    },
+    {
+      "texte": "Fixer une durée de conservation et vérifier la minimisation des données transmises à l'outil.",
+      "source": "RGPD art. 5.1.c et 5.1.e"
+    },
+    {
+      "texte": "Encadrer tout transfert hors UE : clauses contractuelles types et analyse d'impact du transfert.",
+      "source": "RGPD art. 44 à 46"
+    },
+    {
+      "texte": "Réaliser une analyse d'impact relative à la protection des données avant la mise en service.",
+      "source": "RGPD art. 35 ; liste CNIL des traitements soumis à AIPD"
+    },
+    {
+      "texte": "Risque limité : le client final doit savoir qu'il parle à une machine (AI Act, art. 50.1). Haut risque si l'outil décide de l'accès à un service essentiel.",
+      "source": "AI Act, règlement (UE) 2024/1689"
+    },
+    {
+      "texte": "Former les utilisateurs de l'outil : l'obligation de maîtrise de l'IA s'applique à tout déployeur depuis le 2 février 2025.",
+      "source": "AI Act art. 4"
+    }
+  ],
+  "conditions": [
+    "Anonymisation ou pseudonymisation des données avant envoi à l'outil lorsque le cas d'usage le permet.",
+    "Désactivation contractuelle et technique de tout programme d'amélioration des modèles (opt-out écrit).",
+    "Durée de conservation fixée par avenant, 30 jours au plus pour les journaux.",
+    "Notification des incidents sous 24 heures, inscrite dans l'avenant.",
+    "Information des utilisateurs finaux qu'ils dialoguent avec un système d'IA, et passage à un humain à la demande.",
+    "Revue annuelle de la décision, ou à chaque changement de contrat, de version majeure ou de périmètre de données."
+  ],
+  "actions": [
+    "Autoriser un pilote limité, sans données sensibles, le temps de signer l'avenant.",
+    "Négocier l'avenant type ci-dessous avant le déploiement général.",
+    "Compléter le contrat sur 1 point absent : transparence sur l'usage de l'ia."
+  ],
+  "clauses_correctives": [
+    {
+      "sujet": "Entraînement des modèles sur les données du Client",
+      "texte": "Le Fournisseur s'interdit d'utiliser les données, documents, requêtes et résultats du Client pour entraîner, affiner, tester ou améliorer tout modèle d'intelligence artificielle, le sien ou celui d'un tiers. Les programmes d'amélioration sont désactivés par défaut pour le Client."
+    },
+    {
+      "sujet": "Durée de conservation et suppression",
+      "texte": "Les données du Client sont supprimées au plus tard trente (30) jours après la fin de leur utilisation et, en tout état de cause, à la fin du contrat, avec remise d'un certificat de suppression. Aucune conservation à des fins propres du Fournisseur n'est autorisée."
+    },
+    {
+      "sujet": "Localisation et transferts hors Union européenne",
+      "texte": "Les données du Client sont hébergées et traitées exclusivement dans l'Union européenne. Tout transfert vers un pays tiers requiert l'accord écrit préalable du Client, l'adoption des clauses contractuelles types et une analyse d'impact du transfert."
+    },
+    {
+      "sujet": "Sous-traitants ultérieurs",
+      "texte": "La liste des sous-traitants ultérieurs est annexée au contrat. Tout ajout ou remplacement est notifié au Client au moins trente (30) jours à l'avance ; le Client peut s'y opposer et, à défaut d'accord, résilier sans frais."
+    },
+    {
+      "sujet": "Notification des violations de données",
+      "texte": "Toute violation de données à caractère personnel ou tout incident de sécurité affectant les données du Client est notifié au Client dans les vingt-quatre (24) heures suivant sa découverte, avec les informations prévues à l'article 33.3 du RGPD, puis complété au fil de l'enquête."
+    },
+    {
+      "sujet": "Droit d'audit",
+      "texte": "Le Client, ou un tiers indépendant mandaté par lui, peut auditer une fois par an, et à tout moment en cas d'incident ou de demande d'une autorité, le respect par le Fournisseur de ses obligations. Le Fournisseur communique en outre ses rapports d'audit indépendants."
+    },
+    {
+      "sujet": "Mesures de sécurité et chiffrement",
+      "texte": "Les données du Client sont chiffrées en transit (TLS 1.2 minimum) et au repos (AES-256). Le Fournisseur maintient une certification ISO 27001 ou équivalente et en communique le certificat chaque année."
+    },
+    {
+      "sujet": "Responsabilité du Fournisseur",
+      "texte": "La responsabilité du Fournisseur est plafonnée à douze (12) mois de redevances, sans plafond en cas de manquement aux obligations de confidentialité, de sécurité ou de protection des données personnelles, ni en cas de sanction prononcée par une autorité du fait du Fournisseur."
+    },
+    {
+      "sujet": "Décision automatisée et supervision humaine",
+      "texte": "Aucune décision produisant des effets juridiques ou significatifs sur une personne n'est prise sur le seul fondement du traitement automatisé. Le Fournisseur documente la logique du système, fournit les indicateurs de biais mesurés par groupe et permet au Client de désactiver tout classement automatique."
+    },
+    {
+      "sujet": "Modification unilatérale du contrat",
+      "texte": "Toute modification des conditions contractuelles, de l'accord de traitement des données ou de la liste des sous-traitants requiert l'accord écrit du Client."
+    },
+    {
+      "sujet": "Transparence sur l'usage de l'IA",
+      "texte": "Le Fournisseur met à disposition les fonctions nécessaires pour informer les personnes qu'elles interagissent avec un système d'IA et pour marquer les contenus générés, conformément à l'article 50 de l'AI Act."
+    }
+  ],
+  "points_bloquants": [],
+  "mention": "Décision préparée par Custodix AI. Validation humaine requise avant tout déploiement."
+}

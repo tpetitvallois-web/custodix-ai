@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Custodix AI, fiche de décision",
+  "description": "Sortie attendue du moteur d'analyse (règles ou Claude). Même structure dans les deux cas : seule l'extraction des clauses change.",
+  "type": "object",
+  "required": ["meta", "verdict", "score", "resume", "risques", "clauses_critiques", "clauses_manquantes", "obligations", "conditions", "actions", "clauses_correctives", "mention"],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": ["outil", "fournisseur", "categorie", "cas_usage", "donnees", "pays", "utilisateurs", "date", "moteur"],
+      "properties": {
+        "outil": { "type": "string" },
+        "fournisseur": { "type": "string" },
+        "categorie": { "type": "string", "enum": ["chatbot", "rh", "marketing", "support", "documents", "code", "autre"] },
+        "cas_usage": { "type": "string" },
+        "donnees": { "type": "array", "items": { "type": "string", "enum": ["aucune", "clients", "rh", "sante", "confidentiel", "code"] } },
+        "pays": { "type": "string" },
+        "utilisateurs": { "type": "integer", "minimum": 0 },
+        "date": { "type": "string", "format": "date" },
+        "moteur": { "type": "string", "description": "règles v1 (démonstrateur) ou claude-<modèle>" }
+      }
+    },
+    "verdict": { "type": "string", "enum": ["VERT", "ORANGE", "ROUGE"] },
+    "score": { "type": "integer", "minimum": 0, "maximum": 100, "description": "VERT < 35, ORANGE 35 à 64, ROUGE à partir de 65 ou dès qu'un point bloquant existe" },
+    "niveau_juridique": { "type": "string", "enum": ["faible", "modéré", "élevé"] },
+    "resume": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "type": "string" }, "description": "Résumé exécutif en trois phrases : exposition, état du contrat, décision" },
+    "risques": {
+      "type": "array",
+      "items": { "type": "object", "required": ["gravite", "titre", "detail", "base"], "properties": {
+        "gravite": { "type": "string", "enum": ["élevée", "moyenne", "faible"] },
+        "titre": { "type": "string" }, "detail": { "type": "string" },
+        "base": { "type": "string", "description": "Article ou texte applicable" } } }
+    },
+    "clauses_critiques": {
+      "type": "array",
+      "items": { "type": "object", "required": ["sujet", "statut", "extrait", "base"], "properties": {
+        "sujet": { "type": "string" },
+        "statut": { "type": "string", "enum": ["dangereuse", "ambiguë"] },
+        "extrait": { "type": "string", "description": "Citation exacte du contrat, jamais reformulée" },
+        "base": { "type": "string" } } }
+    },
+    "clauses_protectrices": { "type": "array", "items": { "type": "object", "required": ["sujet", "extrait"], "properties": { "sujet": { "type": "string" }, "extrait": { "type": "string" } } } },
+    "clauses_manquantes": { "type": "array", "items": { "type": "object", "required": ["sujet", "base"], "properties": { "sujet": { "type": "string" }, "base": { "type": "string" } } } },
+    "obligations": { "type": "array", "items": { "type": "object", "required": ["texte", "source"], "properties": { "texte": { "type": "string" }, "source": { "type": "string" } } } },
+    "conditions": { "type": "array", "items": { "type": "string" }, "description": "Vide si le verdict est ROUGE" },
+    "actions": { "type": "array", "items": { "type": "string" } },
+    "clauses_correctives": { "type": "array", "items": { "type": "object", "required": ["sujet", "texte"], "properties": { "sujet": { "type": "string" }, "texte": { "type": "string" } } } },
+    "points_bloquants": { "type": "array", "items": { "type": "string" }, "description": "Chaque point impose le ROUGE" },
+    "validation": {
+      "type": "object", "description": "Ajouté par l'humain, jamais par le moteur",
+      "properties": { "nom": { "type": "string" }, "role": { "type": "string", "enum": ["Avocat", "DPO", "Expert conformité", "Expert IA"] }, "date": { "type": "string", "format": "date-time" }, "signature": { "type": "string" }, "decision_finale": { "type": "string", "enum": ["VERT", "ORANGE", "ROUGE"] }, "commentaire": { "type": "string" } }
+    },
+    "mention": { "type": "string", "const": "Décision préparée par Custodix AI. Validation humaine requise avant tout déploiement." }
+  }
+}

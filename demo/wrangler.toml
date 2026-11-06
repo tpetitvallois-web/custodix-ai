@@ -1,0 +1,24 @@
+name = "custodix-ai"
+main = "worker/index.js"
+account_id = "e2d939d2a4a4c9453d118a18388bfcb4"
+compatibility_date = "2026-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = ["/api/*"]
+
+# Registre des dossiers : un Durable Object SQLite (dossiers, file d'attente du pont, validations).
+[[durable_objects.bindings]]
+name = "REGISTRE"
+class_name = "Registre"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Registre"]
+
+[observability]
+enabled = true
+
+# Secrets (wrangler secret put) : PONT_TOKEN (jeton du pont local), ANTHROPIC_API_KEY (lecture directe par l'API, facultatif).

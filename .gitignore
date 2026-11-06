@@ -1,0 +1,9 @@
+node_modules/
+.wrangler/
+.dev.vars
+pont/.env
+pont/*.log
+deck/hd-*.png
+deck/*.pptx
+deck/*.pdf
+.DS_Store

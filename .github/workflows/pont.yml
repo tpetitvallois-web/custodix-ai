@@ -1,0 +1,42 @@
+# Lecteur Custodix AI sur GitHub Actions : même principe que la veille emploi (Automatisation-Job).
+# Le Worker réveille ce workflow à chaque dossier déposé (repository_dispatch) ; le pont vide la file
+# avec le Claude de l'abonnement (CLAUDE_CODE_OAUTH_TOKEN, créé par `claude setup-token`) puis s'arrête.
+# Une passe toutes les 30 minutes en secours, au cas où un réveil se perdrait.
+
+name: Lecteur Custodix
+
+on:
+  repository_dispatch:
+    types: [custodix-dossier]
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  lire:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            pont/pont.js
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Installer Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Lire les dossiers en attente
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          PONT_TOKEN: ${{ secrets.PONT_TOKEN }}
+          CUSTODIX_URL: ${{ vars.CUSTODIX_URL || 'https://custodix-ai.gererseul-avis-worker.workers.dev' }}
+          PONT_ONCE_GRACE_MS: "30000"
+        run: node pont/pont.js --once

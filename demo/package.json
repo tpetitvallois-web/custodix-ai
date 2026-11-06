@@ -1,0 +1,18 @@
+{
+  "name": "custodix-ai-demo",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --port 8775",
+    "deploy": "wrangler deploy",
+    "pont": "node ../pont/pont.js",
+    "lot": "node ../pont/lot.js"
+  },
+  "devDependencies": {
+    "wrangler": "^4.147.0"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.6.0"
+  }
+}
