@@ -6,6 +6,8 @@ import { TOPICS } from "../public/engine.js";
 import { SYSTEM as LECTURE_SYSTEM, SCHEMA as LECTURE_SCHEMA, sujetsTexte } from "./lecture.js";
 
 export const MODEL_CHAT = "opus";
+// Tours sans contrat à lire (question, précision, suite d'un avis) : modèle plus rapide, la lecture reste confiée au modèle principal.
+export const MODEL_CHAT_RAPIDE = "sonnet";
 const CATEGORIES = ["chatbot", "rh", "marketing", "support", "documents", "code", "autre"];
 const DONNEES = ["aucune", "clients", "rh", "sante", "confidentiel", "code"];
 

@@ -6,6 +6,7 @@ import { analyse } from "./engine.js";
 import { SCENARIOS, CATEGORIES } from "./scenarios.js";
 import { readFile } from "./files.js";
 import { askBar } from "./ask.js";
+import { mountWork, expectedSeconds } from "./progress.js";
 export { readFile };
 
 const DEPTS = { fr: ["Juridique", "Ressources humaines", "Marketing", "Service client", "Informatique", "Finance", "Achats", "Direction", "Autre"], en: ["Legal", "Human resources", "Marketing", "Customer service", "IT", "Finance", "Procurement", "Management", "Other"] };
@@ -209,7 +210,7 @@ export async function renderProgress(root, id) {
   const paintSteps = (doneUpTo, detail = {}) => {
     v.querySelector("#steps").innerHTML = steps.map(([k, det], i) => `<li class="${i < doneUpTo ? "is-done" : i === doneUpTo ? "is-on" : ""}"><span class="ic">${i < doneUpTo ? ICON.check : ""}</span><span>${t(k)}<span class="det">${esc(detail[i] ?? det)}</span></span></li>`).join("");
   };
-  const expected = Math.max(35, Math.min(150, 25 + words / 120));
+  const expected = expectedSeconds(true, words);
   const finish = (dd) => {
     clearTimers();
     const L2 = dd.resultat?.lecture;
@@ -287,36 +288,85 @@ function renderChatStart(v) {
   askBar(v.querySelector("#nask"), { tone: "light", chips: 8, autofocus: true });
 }
 
+const hhmm = (ms) => new Intl.DateTimeFormat(getLang() === "en" ? "en-GB" : "fr-FR", { hour: "2-digit", minute: "2-digit" }).format(new Date(ms));
+// Texte de réponse : paragraphes, listes numérotées (1. ...) et listes à puces (- ...).
+const paras = (txt) => {
+  const out = []; let list = null;
+  for (const line of String(txt || "").split(/\n+/).map((l) => l.trim()).filter(Boolean)) {
+    const n = line.match(/^(\d+)[.)]\s+(.*)$/), b = line.match(/^[-•]\s+(.*)$/);
+    const kind = n ? "ol" : b ? "ul" : null;
+    if (kind) { if (!list || list.kind !== kind) { list = { kind, items: [] }; out.push(list); } list.items.push(esc(n ? n[2] : b[1]).replace(/^([^:]{2,60}) :/, "<strong>$1</strong> :")); }
+    else { list = null; out.push(`<p>${esc(line)}</p>`); }
+  }
+  return out.map((x) => (typeof x === "string" ? x : `<${x.kind}>${x.items.map((i) => `<li>${i}</li>`).join("")}</${x.kind}>`)).join("");
+};
+const MARK = `<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect width="24" height="24" rx="6" fill="currentColor"/><path d="M7 17.5 12 6.5l5 11M8.9 13.5h6.2" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const DATA_L = () => Object.fromEntries([...PERSONAL, ...OTHER, ["aucune", "Aucune donnée personnelle", "No personal data"]].map(([k, fr, en]) => [k, getLang() === "en" ? en : fr]));
+const CAT_L = (k) => (getLang() === "en" ? CAT_EN[k] : (CATEGORIES.find(([id]) => id === k) || [])[1]) || k;
+
+// Conversation : un journal d'instruction (entrées datées, pas de bulles), la fiche du dossier qui se remplit à droite,
+// et une carte de travail pendant la lecture.
 export async function renderConversation(root, id) {
   document.title = `${L("Conversation", "Conversation")} ${id}, Aucteva`;
   const v = shellLayout(root, "new");
   let c;
   try { c = (await api(`/conversations/${id}`)).conversation; }
   catch (e) { v.innerHTML = `<div class="err">${esc(e.message)}</div><p style="margin-top:12px"><a class="btn" href="/app/nouveau">${t("conv.new")}</a></p>`; return; }
-  v.innerHTML = `<div class="ph"><div><div class="crumbs"><a href="/app/nouveau">${t("new.tab.chat")}</a> / <span class="mono">${esc(id)}</span></div><h1 id="ct"></h1></div><a class="btn btn--secondary" href="/app/nouveau">${t("conv.new")}</a></div>
-    <div class="chat"><div class="chat__list" id="cl" aria-live="polite"></div>${composer(t("conv.reply"))}</div>`;
-  const list = v.querySelector("#cl");
-  let at = Date.now();
+  v.innerHTML = `<div class="ph"><div><div class="crumbs"><a href="/app/nouveau">${t("new.tab.chat")}</a> / <span class="mono">${esc(id)}</span></div><h1 id="ct"></h1></div><a class="btn btn--secondary" href="/app/nouveau">${ICON.plus}${t("conv.new")}</a></div>
+    <div class="cv">
+      <div class="cv__main"><div class="cv__list" id="cl"></div><div id="cw"></div>${composer(t("conv.reply"))}</div>
+      <aside class="cv__side" id="cside" aria-label="${L("Fiche du dossier", "File summary")}"></aside>
+    </div>`;
+  const list = v.querySelector("#cl"), waitEl = v.querySelector("#cw");
+  let work = null;
   const busy = () => c.statut === "en_attente" || c.statut === "en_cours";
+  const entry = (m) => {
+    if (m.role === "user") return `<article class="ent ent--user"><header><span class="ent__av">${L("V", "Y")}</span><span class="ent__who">${L("Vous", "You")}</span><time>${hhmm(m.at)}</time></header>
+      <div class="ent__body">${paras(m.text)}</div>${m.pieces?.length ? `<div class="ent__pieces">${m.pieces.map((p) => `<span class="file">${ICON.doc}<span>${esc(p.nom)}</span><em>${fmtInt(p.mots)} ${t("d.words")}</em></span>`).join("")}</div>` : ""}</article>`;
+    const d = m.dossier;
+    return `<article class="ent ent--ai${d ? " ent--result" : ""}"><header><span class="ent__av ent__av--ai">${MARK}</span><span class="ent__who">Aucteva</span><span class="ent__role">${L("assistant juridique", "legal assistant")}</span><time>${hhmm(m.at)}</time></header>
+      ${d ? `<div class="rcard">
+        <div class="rcard__top"><span class="rcard__lbl">${L("Avis préparé", "Prepared opinion")}</span><span class="mono small muted">${esc(d.id)}</span></div>
+        <div class="rcard__main">${avisPill(d.verdict)}<div class="rcard__score"><span class="v">${d.score}</span><span class="muted">/ 100 ${t("ws.vigilance").toLowerCase()}</span></div></div>
+        <div class="meter meter--${d.verdict}" aria-hidden="true"><span style="width:${d.score}%"></span></div>
+        <ul class="rcard__facts">${d.citations ? `<li>${ICON.check}${d.citations.verifiees} / ${d.citations.total} ${L("citations retrouvées mot pour mot", "quotes found word for word")}</li>` : ""}${d.bloquants != null ? `<li>${d.bloquants ? `${d.bloquants} ${L(d.bloquants > 1 ? "points bloquants" : "point bloquant", d.bloquants > 1 ? "blocking issues" : "blocking issue")}` : L("Aucun point bloquant", "No blocking issue")}</li>` : ""}<li>${L("En attente de validation par un avocat", "Awaiting a lawyer's approval")}</li></ul>
+        <div class="rcard__actions"><a class="btn btn--sm" href="/app/dossier/${esc(d.id)}">${L("Ouvrir l'analyse", "Open the analysis")}${ICON.arrow}</a><a class="btn btn--secondary btn--sm" href="/app/dossier/${esc(d.id)}/synthese">${L("Synthèse et avenant", "Summary and amendment")}</a></div>
+      </div>` : `<div class="ent__body">${paras(m.text)}</div>`}</article>`;
+  };
+  const side = () => {
+    const d = c.dossier || {}, DL = DATA_L();
+    const row = (k, val) => `<div class="fiche__row${val ? " is-set" : ""}"><dt>${k}</dt><dd>${val ? esc(val) : `<span class="muted">${L("à préciser", "to be set")}</span>`}</dd></div>`;
+    const filled = [d.outil, d.fournisseur, d.categorie, d.cas_usage, d.donnees?.length, d.pays, d.utilisateurs, c.pieces.length].filter(Boolean).length;
+    v.querySelector("#cside").innerHTML = `<div class="fiche">
+      <div class="fiche__head"><strong>${L("Fiche du dossier", "File summary")}</strong><span class="mono small">${filled}/8</span></div>
+      <div class="meter meter--fiche" aria-hidden="true"><span style="width:${Math.round(filled / 8 * 100)}%"></span></div>
+      <dl>${row(L("Outil", "Tool"), d.outil)}${row(L("Fournisseur", "Vendor"), d.fournisseur)}${row(L("Catégorie", "Category"), d.categorie && CAT_L(d.categorie))}${row(L("Usage", "Use"), d.cas_usage)}${row(L("Données", "Data"), d.donnees?.length && d.donnees.map((x) => DL[x] || x).join(", "))}${row(L("Pays", "Countries"), d.pays)}${row(L("Utilisateurs", "Users"), d.utilisateurs && fmtInt(d.utilisateurs))}${row(L("Documents", "Documents"), c.pieces.length && c.pieces.map((p) => p.nom).join(", "))}</dl>
+      <p class="fiche__note">${c.dossierId ? `<a href="/app/dossier/${esc(c.dossierId)}">${L("Dossier", "File")} ${esc(c.dossierId)}${ICON.arrow}</a>` : L("L'assistant remplit cette fiche au fil de la conversation et ne demande que ce qui manque.", "The assistant fills in this summary as you talk and only asks for what is missing.")}</p>
+    </div>`;
+  };
   const paint = () => {
     v.querySelector("#ct").textContent = c.dossier?.outil ? `${c.dossier.outil}${c.dossier.fournisseur ? `, ${c.dossier.fournisseur}` : ""}` : L("Examen d'un outil d'IA", "AI tool review");
-    list.innerHTML = c.messages.map((m) => `<div class="msg msg--${m.role === "user" ? "user" : "assistant"}"><div class="msg__text">${esc(m.text)}</div>
-      ${m.pieces?.length ? `<div class="msg__pieces">${m.pieces.map((p) => `<span class="chip">${esc(p.nom)}, ${fmtInt(p.mots)} ${t("d.words")}</span>`).join("")}</div>` : ""}
-      ${m.dossier ? `<a class="dcard" href="/app/dossier/${esc(m.dossier.id)}">${avisPill(m.dossier.verdict)}<span class="muted small">${t("ws.vigilance")} ${m.dossier.score} / 100</span><span class="go">${t("tbl.open")} ${esc(m.dossier.id)}${ICON.arrow}</span></a>` : ""}</div>`).join("")
-      + (busy() ? `<div class="msg msg--assistant"><span class="wait"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span id="cw">${c.pieces.length ? L("Lecture en cours", "Reading") : L("Réponse en cours", "Replying")}</span></span></div>` : "")
-      + (c.statut === "erreur" ? `<div class="msg msg--assistant"><div class="msg__text">${L("La réponse a échoué", "The reply failed")} : ${esc(c.erreur || "")}. ${L("Renvoyez votre message.", "Send your message again.")}</div></div>` : "");
+    list.innerHTML = c.messages.map(entry).join("")
+      + (c.statut === "erreur" ? `<article class="ent ent--ai"><div class="ent__body err">${L("La réponse a échoué", "The reply failed")} : ${esc(c.erreur || "")}. ${L("Renvoyez votre message.", "Send your message again.")}</div></article>` : "");
+    if (busy()) {
+      const last = [...c.messages].reverse().find((m) => m.role === "user");
+      const reading = !!(last?.pieces?.length) || (c.pieces.length > 0 && !c.dossierId);
+      const state = c.statut === "en_cours" ? "running" : "queued";
+      if (!work) work = mountWork(waitEl, { reading, docs: reading ? c.pieces : [], started: last?.at || Date.now(), state });
+      else work.set(state);
+    } else if (work) { work.stop(); work = null; waitEl.innerHTML = ""; }
+    side();
     v.querySelector("#cs").disabled = busy(); v.querySelector("#ci").disabled = busy();
-    list.lastElementChild?.scrollIntoView({ block: "end" });
+    (busy() ? waitEl : list.lastElementChild)?.scrollIntoView({ block: "end", behavior: "smooth" });
   };
   const send = async (text, pieces) => {
-    try { c = (await api(`/conversations/${id}/messages`, { text, pieces })).conversation; at = Date.now(); paint(); poll(); return true; }
+    try { c = (await api(`/conversations/${id}/messages`, { text, pieces })).conversation; paint(); poll(); return true; }
     catch (e) { toast(e.message, "err"); return false; }
   };
   bindComposer(v, send);
   const poll = async () => {
     clearTimers();
-    if (!busy()) { v.querySelector("#ci").focus(); return; }
-    const w = v.querySelector("#cw"); if (w) w.textContent = `${c.pieces.length ? L("Lecture en cours", "Reading") : L("Réponse en cours", "Replying")}, ${Math.round((Date.now() - at) / 1000)} s`;
+    if (!busy()) { v.querySelector("#ci").focus({ preventScroll: true }); return; }
     try { const r = (await api(`/conversations/${id}`)).conversation; if (r.maj !== c.maj || r.statut !== c.statut) { c = r; paint(); if (c.dossierId) invalidate(); } } catch { /* nouvelle tentative */ }
     timers.push(setTimeout(poll, 2000));
   };

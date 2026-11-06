@@ -167,7 +167,7 @@ export function renderQueue(root) {
     const legal = rows.filter((x) => x.statut === "termine" && !x.validation);
     const dec = rows.filter((x) => x.validation && !x.decision);
     const list = (arr, tab) => arr.length ? arr.slice(0, 60).map((x) => `<div class="qrow"><div><strong>${esc(x.outil)}</strong><span class="m">${esc(x.fournisseur)} · <span class="mono">${esc(x.id)}</span> · ${esc(fmtDay(x.maj || x.cree))}</span></div><div style="display:flex;gap:12px;align-items:center">${avisPill(x.verdict)}<a class="btn btn--secondary btn--sm" href="/app/dossier/${esc(x.id)}/${tab}">${t("tbl.open")}</a></div></div>`).join("") : `<p class="empty">${t("q.none")}</p>`;
-    v.querySelector("[data-body]").innerHTML = `<div class="grid2">
+    v.querySelector("[data-body]").innerHTML = `<div class="grid2 grid2--queue">
       <section class="card"><div class="card__head"><h2>${t("q.legal")}</h2><span class="pill pill--neutral">${legal.length}</span></div>${list(legal, "decision")}</section>
       <section class="card"><div class="card__head"><h2>${t("q.decision")}</h2><span class="pill pill--neutral">${dec.length}</span></div>${list(dec, "decision")}</section>
     </div>`;

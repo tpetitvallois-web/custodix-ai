@@ -5,7 +5,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { analyse } from "../public/engine.js";
 import { SYSTEM, SCHEMA, userPrompt, verifyReading, MODEL_API, MODEL_PONT } from "./lecture.js";
 import { handleMcp } from "./mcp.js";
-import { MODEL_CHAT, CHAT_SYSTEM, CHAT_SCHEMA, chatPrompt, mergeDossier, avisMessage } from "./chat.js";
+import { MODEL_CHAT, MODEL_CHAT_RAPIDE, CHAT_SYSTEM, CHAT_SCHEMA, chatPrompt, mergeDossier, avisMessage } from "./chat.js";
 
 const MAX_CONTRACT = 600_000; // caractères, environ 150 000 jetons
 const PONT_TIMEOUT = 10 * 60 * 1000; // un dossier pris par le pont et sans réponse est remis en file
@@ -175,7 +175,7 @@ export class Registre extends DurableObject {
     pick.statut = "en_cours"; pick.maj = now; pick.tentatives = (pick.tentatives || 0) + 1;
     if (pick.id.startsWith("CV-")) {
       await this.ctx.storage.put(`conv:${pick.id}`, pick);
-      return { id: pick.id, model: MODEL_CHAT, system: CHAT_SYSTEM, prompt: chatPrompt(pick, await this._pieces(pick)), schema: CHAT_SCHEMA, tentative: pick.tentatives };
+      return { id: pick.id, model: aLire(pick) ? MODEL_CHAT : MODEL_CHAT_RAPIDE, system: CHAT_SYSTEM, prompt: chatPrompt(pick, await this._pieces(pick)), schema: CHAT_SCHEMA, tentative: pick.tentatives };
     }
     await this.ctx.storage.put(`dossier:${pick.id}`, pick);
     const contract = await this._contract(pick);
@@ -270,7 +270,7 @@ export class Registre extends DurableObject {
       const opened = await this.creer(input, "connecteur", false);
       const done = await this.terminer(opened.id, res.lecture, "lecture intégrale v1 (conversation)", MODEL_CHAT);
       c.dossierId = done.id;
-      c.messages.push({ role: "assistant", text: avisMessage(done), at: Date.now(), dossier: { id: done.id, verdict: done.resultat.verdict, score: done.resultat.score } });
+      c.messages.push({ role: "assistant", text: avisMessage(done), at: Date.now(), dossier: { id: done.id, verdict: done.resultat.verdict, score: done.resultat.score, citations: done.resultat.lecture?.citations || null, bloquants: done.resultat.points_bloquants.length, conditions: done.resultat.conditions.length } });
     }
     c.statut = "idle"; c.erreur = null; c.maj = Date.now();
     await this.ctx.storage.put(`conv:${id}`, c);
@@ -451,6 +451,9 @@ const bearer = (request, env) => {
   const h = request.headers.get("authorization") || "";
   return !!env.PONT_TOKEN && h === `Bearer ${env.PONT_TOKEN}`;
 };
+
+// Une lecture de contrat est possible à ce tour : nouvelle pièce jointe, ou pièces déjà là sans dossier ouvert.
+const aLire = (c) => { const last = [...c.messages].reverse().find((m) => m.role === "user"); return !!(last?.pieces?.length) || (c.pieces.length > 0 && !c.dossierId); };
 
 export default {
   async fetch(request, env, ctx) {
