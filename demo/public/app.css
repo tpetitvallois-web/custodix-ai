@@ -560,3 +560,15 @@ p { margin: 0 0 12px; }
 .split > div { min-width: 0; }
 #reg-mini { overflow-x: auto; }
 @media (max-width: 900px) { .main.main--flush { padding: 0; } }
+
+/* Observation active dans le document, et action proposée par observation */
+.focusbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--off); min-height: 52px; flex-wrap: wrap; }
+.focusbar__ref { font-size: 12.5px; color: var(--muted); font-family: var(--mono); letter-spacing: 0; }
+.focusbar__obs { display: flex; gap: 8px; align-items: center; font-weight: 500; font-size: 14px; margin-top: 2px; flex-wrap: wrap; }
+.focusbar__nav { display: flex; align-items: center; gap: 2px; }
+.focusbar__nav .iconbtn { width: 30px; height: 30px; }
+.todo { margin-top: 8px; font-size: 13.5px; color: var(--ink-2); background: var(--white); border: 1px solid var(--line); border-radius: var(--r); padding: 8px 12px; }
+.todo strong { font-weight: 600; color: var(--ink); }
+.todo details { margin-top: 6px; }
+.todo summary { cursor: pointer; color: var(--blue-ink); font-size: 13px; }
+.todo details p { font-family: var(--serif); font-size: 14px; margin: 6px 0 0; color: var(--ink-2); }

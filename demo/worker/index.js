@@ -385,7 +385,7 @@ function cleanInput(b) {
     source: s(b.source, 300),
     departement: s(b.departement, 80), responsable: s(b.responsable, 80), complement: s(b.complement, 1500),
     usage: b.usage === "externe" ? "externe" : b.usage === "interne" ? "interne" : "",
-    documents: (Array.isArray(b.documents) ? b.documents : []).slice(0, 10).map((x) => ({ nom: s(x?.nom, 120), format: s(x?.format, 12), taille: Math.max(0, Number(x?.taille) || 0), mots: Math.max(0, Number(x?.mots) || 0) })).filter((x) => x.nom),
+    documents: (Array.isArray(b.documents) ? b.documents : []).slice(0, 10).map((x) => ({ nom: s(x?.nom, 120), format: s(x?.format, 12), taille: Math.max(0, Number(x?.taille) || 0), mots: Math.max(0, Number(x?.mots) || 0), debut: Math.max(0, Number(x?.debut) || 0), pages: Array.isArray(x?.pages) ? x.pages.slice(0, 3000).map((n) => Math.max(0, Math.floor(Number(n) || 0))) : undefined })).filter((x) => x.nom),
   };
   if (!input.tool || !input.vendor || !input.useCase) return { error: "Renseignez le nom de l'outil, le fournisseur et le cas d'usage." };
   return { input };

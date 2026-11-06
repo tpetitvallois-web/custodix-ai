@@ -2,7 +2,7 @@
 import { t, getLang } from "./i18n.js";
 import { api, esc, fmtInt, fmtDay, ICON, avisPill, decisionPill, stagePill, dimensionsOf, constatsOf, statusKey, CLAUSE, clausePill, copy, toast, session, slug } from "./ui.js";
 import { shellLayout, invalidate } from "./shell.js";
-import { avenant, MENTION } from "./engine.js";
+import { avenant, MENTION, TOPICS } from "./engine.js";
 import { fold, locate, renderDoc, sectionOf, scrollWithin } from "./doc.js";
 
 const L = (fr, en) => (getLang() === "en" ? en : fr);
@@ -68,8 +68,20 @@ function paintAnalysis(body, d, texte) {
   const ranges = [], located = new Map();
   if (F) for (const c of cs) { const loc = c.citation && locate(F, c.citation); if (loc) { ranges.push({ start: loc[0], end: loc[1], cls: `cite--${CLAUSE[statusKey(c)]}`, key: c.topic }); located.set(c.topic, loc[0]); } }
   const doc = texte ? renderDoc(texte, ranges) : null;
-  const ref = (topic) => { if (!doc || !located.has(topic)) return ""; const n = doc.lineOf(located.get(topic)); const s = sectionOf(doc.sections, n); return `${s ? `${esc(s.title)}, ` : ""}${t("ws.line")} ${n}`; };
-  const docs = d.input.documents?.length ? d.input.documents.map((x) => x.nom).join(", ") : d.input.source || L("Contrat", "Contract");
+  const DOCS = d.input.documents || [];
+  // Où se trouve un passage : document source, page (PDF), section, ligne.
+  const where = (off) => {
+    const n = doc.lineOf(off), s = sectionOf(doc.sections, n);
+    let src = null, page = null;
+    for (const x of DOCS) if ((x.debut || 0) <= off) src = x;
+    if (src?.pages?.length) { page = 0; for (let i = 0; i < src.pages.length; i++) if (src.pages[i] <= off) page = i + 1; }
+    return { line: n, section: s?.title || null, page, src: src?.nom || null };
+  };
+  const refText = (w) => [w.section, `${t("ws.line")} ${w.line}`, w.page ? `${t("ws.page")} ${w.page}` : null].filter(Boolean).join(" · ") + (DOCS.length > 1 && w.src ? ` · ${w.src}` : "");
+  const ref = (topic) => (doc && located.has(topic) ? esc(refText(where(located.get(topic)))) : "");
+  const docs = DOCS.length ? DOCS.map((x) => x.nom).join(", ") : d.input.source || L("Contrat", "Contract");
+  const FIX = Object.fromEntries(TOPICS.map((x) => [x.id, x.fix]));
+  const order = [...located.entries()].sort((a, b) => a[1] - b[1]).map(([k]) => k); // observations dans l'ordre du texte
   const human = [
     ...cs.filter((c) => c.statut === "ambiguë").map((c) => `${c.sujet} : ${L("formulation ambiguë", "ambiguous wording")}.`),
     ...cs.filter((c) => c.statut === "absent" && c.pertinent).map((c) => `${c.sujet} : ${L("aucune clause dans le contrat", "no clause in the contract")}.`),
@@ -87,7 +99,9 @@ function paintAnalysis(body, d, texte) {
           <span class="hits" id="dh" aria-live="polite"></span>
           <button type="button" class="btn btn--ghost btn--sm" id="dp" aria-label="${L("Résultat précédent", "Previous match")}">${ICON.up}</button><button type="button" class="btn btn--ghost btn--sm" id="dn" aria-label="${L("Résultat suivant", "Next match")}">${ICON.down}</button>
           ${doc.sections.length > 1 ? `<label><span class="sr-only">${t("ws.sections")}</span><select class="select" id="ds"><option value="">${t("ws.sections")}</option>${doc.sections.map((s) => `<option value="${s.n}">${esc(s.title)}</option>`).join("")}</select></label>` : ""}
-        </div><div class="doc" id="doc" tabindex="0">${doc.html}</div>` : `<div class="card__body"><p class="muted">${t("ws.noDoc")}</p></div>`}
+        </div>
+        <div class="focusbar" id="fb" aria-live="polite"><span class="muted small">${t("ws.pick")}</span></div>
+        <div class="doc" id="doc" tabindex="0">${doc.html}</div>` : `<div class="card__body"><p class="muted">${t("ws.noDoc")}</p></div>`}
       </section>
       <div class="an">
         <section class="card sumcard">
@@ -109,6 +123,7 @@ function paintAnalysis(body, d, texte) {
                 ${c.citation ? `<q lang="${esc((L2?.langue || "").startsWith("angl") ? "en" : "fr")}">${esc(c.citation)}</q>
                   <div class="topic__f"><span>${located.has(c.topic) ? ref(c.topic) : t("ws.notLocated")}</span>${located.has(c.topic) ? `<button type="button" class="link-btn" data-go="${esc(c.topic)}">${t("ws.locate")}</button>` : ""}</div>`
                 : `<p class="small muted" style="margin:6px 0 0">${t("ws.absent")} ${k === "absent" ? t("ws.absent.review") : ""}</p>`}
+                ${["dangereuse", "ambiguë", "absent"].includes(k) ? `<div class="todo"><strong>${t("ws.check")}</strong> ${esc(t(`ws.check.${k}`))}${FIX[c.topic] ? `<details><summary>${t("ws.fix")}</summary><p>${esc(FIX[c.topic])}</p></details>` : ""}</div>` : ""}
                 <div class="topic__f" style="margin-top:4px"><span>${esc(c.base || "")}</span></div></div>`;
             }).join("")}</div></div>`).join("")}
         </section>
@@ -124,17 +139,26 @@ function paintAnalysis(body, d, texte) {
   body.querySelectorAll("[data-mob]").forEach((b) => { if (b.tagName === "BUTTON") b.addEventListener("click", () => { panes.dataset.mob = b.dataset.mob; body.querySelectorAll("button[data-mob]").forEach((x) => x.setAttribute("aria-selected", String(x === b))); }); });
   if (!doc) return;
   const docEl = body.querySelector("#doc");
-  body.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => {
-    const id = doc.anchors.get(b.dataset.go); const mark = id && body.querySelector(`#${id}`);
+  const fb = body.querySelector("#fb");
+  const dimOf = (topic) => dims.find((x) => x.items.some((c) => c.topic === topic));
+  const focus = (topic, { scroll = true, mobile = true } = {}) => {
+    const id = doc.anchors.get(topic); const mark = id && body.querySelector(`#${id}`);
     if (!mark) return;
-    panes.dataset.mob = "doc"; body.querySelectorAll("button[data-mob]").forEach((x) => x.setAttribute("aria-selected", String(x.dataset.mob === "doc")));
+    if (mobile) { panes.dataset.mob = "doc"; body.querySelectorAll("button[data-mob]").forEach((x) => x.setAttribute("aria-selected", String(x.dataset.mob === "doc"))); }
     body.querySelectorAll(".cite.is-focus").forEach((x) => x.classList.remove("is-focus"));
     body.querySelectorAll(`.cite[data-key="${mark.dataset.key}"]`).forEach((x) => { x.classList.add("is-focus"); x.classList.remove("flash"); void x.offsetWidth; x.classList.add("flash"); });
+    const c = cs.find((x) => x.topic === topic), dm = dimOf(topic), i = order.indexOf(topic);
+    fb.innerHTML = `<div class="focusbar__main"><div class="focusbar__ref">${ref(topic)}</div><div class="focusbar__obs"><span>${esc(dm ? t(`dim.${dm.id}`) : c.sujet)}</span>${clausePill(statusKey(c))}</div></div>
+      <div class="focusbar__nav"><span class="small muted">${t("ws.passage")} ${i + 1} ${t("ws.of")} ${order.length}</span><button type="button" class="iconbtn" data-step="-1" aria-label="${L("Passage précédent", "Previous passage")}">${ICON.up}</button><button type="button" class="iconbtn" data-step="1" aria-label="${L("Passage suivant", "Next passage")}">${ICON.down}</button></div>`;
+    fb.querySelectorAll("[data-step]").forEach((b) => b.addEventListener("click", () => focus(order[(i + Number(b.dataset.step) + order.length) % order.length], { mobile: false })));
+    if (!scroll) return;
     if (getComputedStyle(body.querySelector(".pane--doc")).position === "sticky") scrollWithin(docEl, mark); else { mark.scrollIntoView({ block: "center" }); }
-  }));
+  };
+  body.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => focus(b.dataset.go)));
   // Clic sur un passage surligné : ouvre le domaine correspondant.
   docEl.addEventListener("click", (e) => {
     const mk = e.target.closest(".cite"); if (!mk) return;
+    focus(mk.dataset.key, { scroll: false, mobile: false });
     const dm = [...body.querySelectorAll(".dim")].find((x) => x.querySelector(`[data-go="${mk.dataset.key}"]`));
     if (dm) { dm.classList.add("is-open"); dm.querySelector("button").setAttribute("aria-expanded", "true"); dm.scrollIntoView({ block: "nearest", behavior: "smooth" }); }
   });
@@ -156,7 +180,7 @@ function paintAnalysis(body, d, texte) {
   // Premier domaine critique : son passage est mis en évidence d'emblée.
   const first = dims.find((x) => x.status === "dangereuse") || dims.find((x) => x.status === "ambiguë");
   const fc = first?.items.find((c) => doc.anchors.has(c.topic));
-  if (fc) requestAnimationFrame(() => { const mk = body.querySelector(`#${doc.anchors.get(fc.topic)}`); if (mk) { mk.classList.add("is-focus"); scrollWithin(docEl, mk); } });
+  if (fc) requestAnimationFrame(() => focus(fc.topic, { mobile: false }));
 }
 
 // Onglet Dossier de synthèse : le document à relire, exportable en PDF.

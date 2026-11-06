@@ -152,6 +152,11 @@ const DICT = {
     "ws.cites": "citations vérifiées", "ws.contentFr": "Le contenu des analyses est rédigé en français.",
     "ws.export": "Exporter en PDF", "ws.amendment": "Avenant type", "ws.copyLink": "Copier le lien",
     "ws.tab.doc": "Document", "ws.tab.an": "Analyse",
+    "ws.page": "page", "ws.source": "Source", "ws.passage": "Passage", "ws.of": "sur", "ws.pick": "Choisissez une observation à droite, ou un passage surligné.",
+    "ws.check": "À vérifier", "ws.fix": "Clause corrective proposée",
+    "ws.check.dangereuse": "Clause défavorable au client : à renégocier avant tout déploiement.",
+    "ws.check.ambiguë": "Formulation ambiguë : à faire préciser par écrit par le fournisseur.",
+    "ws.check.absent": "Aucune clause : à obtenir du fournisseur, par avenant ou dans l'accord de traitement.",
 
     "wf.ai": "Avis préparé par l'IA", "wf.ai.d": "Document de travail nécessitant un examen.",
     "wf.law": "Avis validé par l'avocat", "wf.law.d": "Validation humaine, datée et rattachée au dossier.",
@@ -318,6 +323,11 @@ const DICT = {
     "ws.cites": "quotes verified", "ws.contentFr": "Analysis content is written in French.",
     "ws.export": "Export PDF", "ws.amendment": "Model amendment", "ws.copyLink": "Copy link",
     "ws.tab.doc": "Document", "ws.tab.an": "Analysis",
+    "ws.page": "page", "ws.source": "Source", "ws.passage": "Passage", "ws.of": "of", "ws.pick": "Pick an observation on the right, or a highlighted passage.",
+    "ws.check": "To check", "ws.fix": "Proposed corrective clause",
+    "ws.check.dangereuse": "Clause unfavourable to the client: renegotiate before any deployment.",
+    "ws.check.ambiguë": "Ambiguous wording: have the vendor clarify it in writing.",
+    "ws.check.absent": "No clause: obtain one from the vendor, by amendment or in the data processing agreement.",
 
     "wf.ai": "Opinion prepared by AI", "wf.ai.d": "Working document requiring review.",
     "wf.law": "Opinion approved by the lawyer", "wf.law.d": "Human approval, dated and attached to the file.",

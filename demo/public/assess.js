@@ -17,12 +17,13 @@ const save = () => session.set("aucteva.draft", { ...draft, docs: draft.docs.fil
 let etat = null;
 
 // Lecture des fichiers : PDF (pdf.js), Word (.docx), texte.
+// Rend { texte, pages } : pages = position du début de chaque page dans le texte (PDF seulement).
 export async function readFile(file) {
   const name = file.name.toLowerCase();
   if (file.size > 25 * 1048576) throw new Error(L("Fichier trop lourd (25 Mo au plus).", "File too large (25 MB max)."));
   if (name.endsWith(".pdf") || file.type === "application/pdf") return readPdf(file);
   if (name.endsWith(".docx")) return readDocx(file);
-  if (/\.(txt|md|text)$/.test(name) || file.type.startsWith("text/")) return file.text();
+  if (/\.(txt|md|text)$/.test(name) || file.type.startsWith("text/")) return { texte: (await file.text()).replace(/\r\n?/g, "\n") };
   throw new Error(L("Formats acceptés : PDF, Word (.docx), texte (.txt, .md).", "Accepted formats: PDF, Word (.docx), text (.txt, .md)."));
 }
 let pdfjs = null;
@@ -34,9 +35,11 @@ async function readPdf(file) {
     const content = await (await pdf.getPage(i)).getTextContent();
     let line = "", lastY = null; const out = [];
     for (const it of content.items) { if (!("str" in it)) continue; const y = it.transform ? Math.round(it.transform[5]) : null; if (lastY !== null && y !== null && Math.abs(y - lastY) > 2) { out.push(line.trim()); line = ""; } line += it.str + (it.hasEOL ? "\n" : " "); lastY = y; }
-    out.push(line.trim()); pages.push(out.filter(Boolean).join("\n"));
+    out.push(line.trim()); pages.push(out.filter(Boolean).join("\n").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n"));
   }
-  return pages.join("\n\n").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n");
+  const starts = []; let off = 0;
+  for (const pg of pages) { starts.push(off); off += pg.length + 2; }
+  return { texte: pages.join("\n\n"), pages: starts };
 }
 function loadScript(src) { return new Promise((res, rej) => { if (document.querySelector(`script[src="${src}"]`)) return res(); const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej(new Error("Bibliothèque indisponible")); document.head.appendChild(s); }); }
 async function readDocx(file) {
@@ -44,7 +47,7 @@ async function readDocx(file) {
   const zip = await window.JSZip.loadAsync(await file.arrayBuffer());
   const doc = zip.file("word/document.xml"); if (!doc) throw new Error(L("Document Word illisible", "Unreadable Word document"));
   const xml = new DOMParser().parseFromString(await doc.async("string"), "application/xml");
-  return [...xml.getElementsByTagNameNS("*", "p")].map((p) => [...p.getElementsByTagNameNS("*", "t")].map((x) => x.textContent).join("")).join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  return { texte: [...xml.getElementsByTagNameNS("*", "p")].map((p) => [...p.getElementsByTagNameNS("*", "t")].map((x) => x.textContent).join("")).join("\n").replace(/\n{3,}/g, "\n\n").trim() };
 }
 const ext = (n) => (n.split(".").pop() || "").toUpperCase().slice(0, 5);
 
@@ -154,7 +157,7 @@ function bind2(v, paint) {
     for (const file of [...files].slice(0, Math.max(0, 6 - draft.docs.length))) {
       const doc = { nom: file.name, format: ext(file.name), taille: file.size, mots: 0, status: "reading" };
       draft.docs.push(doc); paintFiles();
-      try { const texte = await readFile(file); const n = countWords(texte); if (n < 20) throw new Error(L("Presque aucun texte lisible (scan sans OCR ?)", "Almost no readable text (scan without OCR?)")); Object.assign(doc, { texte, mots: n, status: "ready" }); }
+      try { const { texte, pages } = await readFile(file); const n = countWords(texte); if (n < 20) throw new Error(L("Presque aucun texte lisible (scan sans OCR ?)", "Almost no readable text (scan without OCR?)")); Object.assign(doc, { texte, pages, mots: n, status: "ready" }); }
       catch (e) { Object.assign(doc, { status: "error", error: e.message || "Erreur" }); }
       save(); paintFiles();
     }
@@ -178,11 +181,19 @@ function bind2(v, paint) {
     e.preventDefault();
     const docs = draft.docs.filter((x) => x.status === "ready");
     if (draft.pasted.trim()) docs.push({ nom: L("Texte collé", "Pasted text"), format: "TXT", taille: new Blob([draft.pasted]).size, mots: countWords(draft.pasted), texte: draft.pasted });
-    const contract = docs.length > 1 ? docs.map((x, i) => `=== Document ${i + 1} : ${x.nom} ===\n${x.texte}`).join("\n\n") : docs[0]?.texte || "";
+    let contract = "";
+    const metas = docs.map((x, i) => {
+      if (contract) contract += "\n\n";
+      if (docs.length > 1) contract += `=== Document ${i + 1} : ${x.nom} ===\n`;
+      const tx = x.texte.trimStart(), lead = x.texte.length - tx.length; // le serveur retire les espaces de tête
+      const debut = contract.length;
+      contract += tx;
+      return { nom: x.nom, format: x.format, taille: x.taille, mots: x.mots, debut, pages: Array.isArray(x.pages) && x.pages.length > 1 ? x.pages.map((p) => Math.max(0, p - lead) + debut) : undefined };
+    });
     const err = v.querySelector("#err");
     if (draft.mode === "claude" && contract.trim().length < 200) { err.textContent = t("d.err.none"); return; }
     const dataTypes = draft.personal === "non" && !draft.dataTypes.length ? ["aucune"] : draft.dataTypes;
-    const payload = { tool: draft.tool, vendor: draft.vendor, category: draft.category, useCase: draft.useCase, dataTypes, countries: draft.countries, users: Number(draft.users) || 0, contract, source: draft.source || docs.map((x) => x.nom).join(", "), departement: draft.departement, usage: draft.usage, responsable: draft.responsable, complement: draft.complement, documents: docs.map(({ nom, format, taille, mots }) => ({ nom, format, taille, mots })), mode: draft.mode };
+    const payload = { tool: draft.tool, vendor: draft.vendor, category: draft.category, useCase: draft.useCase, dataTypes, countries: draft.countries, users: Number(draft.users) || 0, contract, source: draft.source || docs.map((x) => x.nom).join(", "), departement: draft.departement, usage: draft.usage, responsable: draft.responsable, complement: draft.complement, documents: metas, mode: draft.mode };
     const go = v.querySelector("#go"); go.disabled = true; err.textContent = "";
     try {
       const { dossier } = await api("/examens", payload);
@@ -266,7 +277,7 @@ export async function renderProgress(root, id) {
 let pending = [];
 async function addPieces(files) {
   for (const file of [...(files || [])].slice(0, 6)) {
-    try { toast(`${L("Lecture de", "Reading")} ${file.name}`); const texte = await readFile(file); if (countWords(texte) < 20) { toast(`${file.name} : ${L("presque aucun texte lisible", "almost no readable text")}`, "err"); continue; } pending.push({ nom: file.name, texte }); }
+    try { toast(`${L("Lecture de", "Reading")} ${file.name}`); const { texte } = await readFile(file); if (countWords(texte) < 20) { toast(`${file.name} : ${L("presque aucun texte lisible", "almost no readable text")}`, "err"); continue; } pending.push({ nom: file.name, texte }); }
     catch (e) { toast(e.message, "err"); }
   }
 }
