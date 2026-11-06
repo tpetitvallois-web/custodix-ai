@@ -11,6 +11,8 @@ const PONT_ONLINE = 45 * 1000;
 const CHUNK = 40_000; // caractères par tranche de contrat stockée // le pont est « en ligne » s'il a interrogé la file depuis moins de 45 s
 
 const ok = (data, status = 200) => Response.json(data, { status });
+// Les dossiers créés avant le 6 novembre portaient le nom du modèle dans l'étiquette du moteur : on l'efface à l'affichage.
+const neutre = (moteur) => (moteur || "").replace(/^claude\S*/i, "lecture intégrale v1");
 const err = (message, status = 400) => Response.json({ ok: false, erreur: message }, { status });
 
 export class Registre extends DurableObject {
@@ -68,7 +70,7 @@ export class Registre extends DurableObject {
     return [...m.values()].map((d) => ({
       id: d.id, statut: d.statut, mode: d.mode, cree: d.cree,
       outil: d.input.tool, fournisseur: d.input.vendor, categorie: d.input.category,
-      verdict: d.resultat?.verdict || null, score: d.resultat?.score ?? null, moteur: d.resultat?.meta?.moteur || null,
+      verdict: d.resultat?.verdict || null, score: d.resultat?.score ?? null, moteur: neutre(d.resultat?.meta?.moteur) || null,
       validation: d.validation ? { nom: d.validation.nom, role: d.validation.role, iso: d.validation.iso } : null,
     }));
   }
@@ -99,9 +101,10 @@ export class Registre extends DurableObject {
   }
 
   // Résultat renvoyé par le pont ou par l'API : vérification des citations puis barème.
-  async terminer(id, reading, moteur) {
+  async terminer(id, reading, moteur, modele = "") {
     const d = await this.ctx.storage.get(`dossier:${id}`);
     if (!d) return null;
+    d.modele = modele; // nom du modèle conservé dans le dossier, jamais affiché
     const contract = await this._contract(d);
     const lecture = verifyReading(contract, reading);
     d.resultat = analyse({ ...d.input, contract }, {
@@ -134,7 +137,7 @@ export class Registre extends DurableObject {
     await this.ctx.storage.put(`dossier:${d.id}`, d);
     try {
       const reading = await lireParApi(key, { ...d.input, contract: await this._contract(d) });
-      await this.terminer(d.id, reading, `${MODEL_API} (API)`);
+      await this.terminer(d.id, reading, "lecture intégrale v1 (API)", MODEL_API);
     } catch (e) {
       console.error("lecture API", d.id, e);
       d.erreur = String(e && e.message ? e.message : e); d.maj = Date.now();
@@ -146,9 +149,10 @@ export class Registre extends DurableObject {
 
   // Vue renvoyée au navigateur : sans le texte du contrat.
   public(d) {
-    const { input, ...rest } = d;
+    const { input, modele, ...rest } = d;
     const { contract, ...meta } = input;
     if (typeof contract === "string") meta.contrat_mots = contract.trim().split(/\s+/).filter(Boolean).length;
+    if (rest.resultat && rest.resultat.meta) rest.resultat = { ...rest.resultat, meta: { ...rest.resultat.meta, moteur: neutre(rest.resultat.meta.moteur) } };
     return { ...rest, input: meta, validation: d.validation ? { ...d.validation, when: fmtDateTime(d.validation.iso) } : null };
   }
 }
@@ -279,7 +283,7 @@ export default {
         const { input, error } = cleanInput(b);
         if (error) return err(error);
         const mode = b.mode === "claude" ? "claude" : "regles";
-        if (mode === "claude" && input.contract.length < 200) return err("La lecture par Claude demande un contrat d'au moins quelques paragraphes.");
+        if (mode === "claude" && input.contract.length < 200) return err("La lecture intégrale demande un contrat d'au moins quelques paragraphes.");
         const d = await registre.creer(input, mode, !!env.ANTHROPIC_API_KEY);
         if (mode === "claude" && !env.ANTHROPIC_API_KEY) ctx.waitUntil(declencherGitHub(env, d.id));
         return ok({ ok: true, dossier: d });
@@ -309,7 +313,7 @@ export default {
           if (b.erreur) { const d = await registre.echouer(m[1], String(b.erreur).slice(0, 500), !!b.definitif); return d ? ok({ ok: true, dossier: d }) : err("Dossier inconnu.", 404); }
           if (!b.lecture || !Array.isArray(b.lecture.clauses)) return err("Lecture invalide.");
           const origine = String(b.origine || "pont local").slice(0, 40);
-          const d = await registre.terminer(m[1], b.lecture, `${b.modele || "claude"} (${origine})`);
+          const d = await registre.terminer(m[1], b.lecture, `lecture intégrale v1 (${origine})`, String(b.modele || "").slice(0, 60));
           return d ? ok({ ok: true, dossier: d }) : err("Dossier inconnu.", 404);
         }
       }

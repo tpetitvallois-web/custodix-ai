@@ -1,5 +1,5 @@
 // Interface de Custodix AI. Cinq écrans, routés par le hash de l'URL : accueil, formulaire, examen en cours, dossier, registre.
-// Le Worker (worker/index.js) tient le registre des dossiers et fait lire les contrats par Claude.
+// Le Worker (worker/index.js) tient le registre des dossiers et fait lire les contrats par le modèle de langage.
 // Le moteur de règles (engine.js) reste disponible dans le navigateur pour fonctionner hors ligne.
 
 import { analyse, avenant, BRAND, MENTION, STEPS } from "./engine.js";
@@ -81,7 +81,7 @@ function stepDetails(dossier) {
   const prot = r.clauses_protectrices.length;
   const total = crit + prot;
   const catLabel = (CATEGORY_LABEL[r.meta.categorie] || "Autre").split(",")[0];
-  const lecture = r.lecture ? `, lu par Claude en ${r.lecture.langue || "langue d'origine"}` : "";
+  const lecture = r.lecture ? `, lu en ${r.lecture.langue || "langue d'origine"}` : "";
   return [
     words ? `${fmtInt(words)} ${plural(words, "mot", "mots")}${lecture}` : "Aucun contrat fourni",
     total ? `${total} ${plural(total, "clause repérée", "clauses repérées")}, ${crit} ${plural(crit, "critique", "critiques")}, ${prot} ${plural(prot, "protectrice", "protectrices")}` : "Aucune clause repérée",
@@ -94,7 +94,7 @@ function stepDetails(dossier) {
 
 // Routage.
 function route() {
-  stepTimers.forEach(clearTimeout); stepTimers = [];
+  stepTimers.forEach((t) => { clearTimeout(t); clearInterval(t); }); stepTimers = [];
   clearTimeout(pollTimer); pollTimer = null;
   const hash = location.hash || "#/";
   const id = (hash.split("/")[2] || "").toUpperCase();
@@ -117,7 +117,7 @@ function renderHome() {
       <h1 class="h-display">${esc(BRAND)}</h1>
       <p class="home__slogan">Chaque IA passe par Custodix.</p>
       <p class="home__subtitle">Autorisation et gouvernance des outils d'intelligence artificielle en entreprise.</p>
-      <p class="home__intro">${esc(BRAND)} prépare, pour chaque outil d'IA, un avis d'autorisation documenté et validé par un avocat. Déposez un contrat ou des conditions d'utilisation, réels ou fictifs : Claude les lit dans leur langue, le barème du cabinet qualifie le risque.</p>
+      <p class="home__intro">${esc(BRAND)} prépare, pour chaque outil d'IA, un avis d'autorisation documenté et validé par un avocat. Déposez un contrat ou des conditions d'utilisation, réels ou fictifs : ils sont lus intégralement dans leur langue, le barème du cabinet qualifie le risque.</p>
       <div class="btn-row home__actions">
         <a class="btn" href="#/analyse" data-action="new">Examiner un outil IA</a>
         <a class="btn btn-secondary" href="#/registre">Registre des dossiers</a>
@@ -136,10 +136,10 @@ function renderHome() {
 
 function etatLine(e) {
   if (!e) return "Service en ligne indisponible : les règles locales restent utilisables.";
-  if (e.lecture === "api") return "Lecture par Claude disponible (API).";
-  if (e.lecture === "pont") return `Lecture par Claude disponible${e.enAttente ? `, ${e.enAttente} ${plural(e.enAttente, "dossier en attente", "dossiers en attente")}` : ""}.`;
-  if (e.lecture === "github") return "Lecture par Claude disponible (lecteur démarré à la demande, une à deux minutes de délai).";
-  return "Lecture par Claude momentanément indisponible : les règles locales restent utilisables.";
+  if (e.lecture === "api") return "Lecture intégrale disponible.";
+  if (e.lecture === "pont") return `Lecture intégrale disponible${e.enAttente ? `, ${e.enAttente} ${plural(e.enAttente, "dossier en attente", "dossiers en attente")}` : ""}.`;
+  if (e.lecture === "github") return "Lecture intégrale disponible (lecteur démarré à la demande, une à deux minutes de délai).";
+  return "Lecture intégrale momentanément indisponible : les règles locales restent utilisables.";
 }
 
 function loadScenario(id) {
@@ -227,14 +227,14 @@ function renderForm() {
             <div class="mode-list">
               <label class="mode${claudeOk ? "" : " mode--off"}">
                 <input type="radio" name="mode" value="claude"${state.mode === "claude" ? " checked" : ""}${claudeOk ? "" : " disabled"}>
-                <span><strong>Lecture par Claude</strong><br>Le contrat est lu intégralement, dans sa langue, par le modèle. Chaque statut est fondé sur une citation vérifiée. De trente secondes à trois minutes.${claudeOk ? "" : " Indisponible pour le moment."}</span>
+                <span><strong>Lecture intégrale</strong><br>Le contrat est lu en entier, dans sa langue, par le lecteur de Custodix AI. Chaque statut est fondé sur une citation vérifiée. De trente secondes à trois minutes.${claudeOk ? "" : " Indisponible pour le moment."}</span>
               </label>
               <label class="mode">
                 <input type="radio" name="mode" value="regles"${state.mode === "regles" ? " checked" : ""}>
-                <span><strong>Règles locales</strong><br>Douze motifs en français, instantané, sans envoi du contrat au modèle. Conçu pour les scénarios de démonstration.</span>
+                <span><strong>Règles locales</strong><br>Douze motifs en français, instantané, le contrat ne quitte pas le navigateur. Conçu pour les scénarios de démonstration.</span>
               </label>
             </div>
-            <span class="hint">Dans les deux cas, le barème, les points bloquants et l'avis sont calculés par le code du cabinet, pas par le modèle.</span>
+            <span class="hint">Dans les deux cas, le barème, les points bloquants et l'avis sont calculés par le code du cabinet.</span>
           </div>
         </div>
         ${state.errors.length ? `<p class="form-error">${esc(state.errorText || "Renseignez le nom de l'outil, le fournisseur et le cas d'usage.")}</p>` : ""}
@@ -321,7 +321,7 @@ function renderForm() {
     const f = state.form;
     state.errors = ["tool", "vendor", "useCase"].filter((k) => !String(f[k] || "").trim());
     state.errorText = "";
-    if (!state.errors.length && state.mode === "claude" && f.contract.trim().length < 200) { state.errors = ["contract"]; state.errorText = "La lecture par Claude demande un contrat : collez le texte, déposez un fichier ou récupérez une page."; }
+    if (!state.errors.length && state.mode === "claude" && f.contract.trim().length < 200) { state.errors = ["contract"]; state.errorText = "La lecture intégrale demande un contrat : collez le texte, déposez un fichier ou récupérez une page."; }
     if (state.errors.length) { renderForm(); app.querySelector(".is-invalid input, .is-invalid textarea")?.focus(); return; }
     startAnalysis();
   });
@@ -413,7 +413,7 @@ async function loadDossier(id) {
   return dossier;
 }
 
-// Écran 3 : examen en cours. Le moteur de règles est instantané, la lecture par Claude prend du temps : on attend le serveur.
+// Écran 3 : examen en cours. Le moteur de règles est instantané, la lecture intégrale prend du temps : on attend le serveur.
 async function renderProgress(id) {
   if (!id) { go("#/analyse"); return; }
   let d;
@@ -425,6 +425,10 @@ async function renderProgress(id) {
     <section class="progress" aria-live="polite">
       <h1 class="h-page progress__title">Examen en cours</h1>
       <p class="progress__sub">${esc(d.input.tool)}, ${esc(d.input.vendor)}. Dossier ${esc(d.id)}.</p>
+      <div class="wait" id="progress-waitbox" hidden>
+        <div class="wait__bar" role="progressbar" aria-label="Lecture en cours"><span id="progress-fill"></span></div>
+        <p class="progress__wait" id="progress-wait"></p>
+      </div>
       <ol class="steps">
         ${STEPS.map((label, i) => `
           <li class="step" data-step="${i}">
@@ -433,7 +437,6 @@ async function renderProgress(id) {
             <span class="step__detail"></span>
           </li>`).join("")}
       </ol>
-      <p class="progress__wait" id="progress-wait"></p>
       <div id="progress-error"></div>
     </section>`;
   const items = [...app.querySelectorAll(".step")];
@@ -456,7 +459,25 @@ async function renderProgress(id) {
 
   if (d.statut === "termine") { play(d); window.scrollTo(0, 0); return; }
 
+  // Barre d'attente : elle avance vite au début puis ralentit, et finit à l'arrivée du résultat.
+  const waitbox = app.querySelector("#progress-waitbox");
+  const fill = app.querySelector("#progress-fill");
+  waitbox.hidden = false;
+  const expected = Math.max(35, Math.min(150, 25 + (d.input.contrat_mots || 0) / 120)); // secondes attendues selon la longueur
+  let ticker = null;
+  const paint = () => {
+    const sec = (Date.now() - started) / 1000;
+    fill.style.width = `${Math.round(92 * (1 - Math.exp(-sec / expected)))}%`;
+    const mm = Math.floor(sec / 60), ss = Math.floor(sec % 60);
+    wait.textContent = `Lecture du contrat en cours${d.input.contrat_mots ? `, ${fmtInt(d.input.contrat_mots)} mots` : ""}. ${mm ? `${mm} min ${String(ss).padStart(2, "0")} s` : `${ss} s`}.${!(state.etat && state.etat.lecture === "api") && d.statut === "en_attente" && sec > (state.etat && state.etat.github ? 150 : 45) ? " Le dossier attend un lecteur : s'il reste en attente, basculez sur les règles locales." : ""}`;
+  };
+  paint();
+  ticker = setInterval(paint, 1000);
+  stepTimers.push(ticker);
+  const finish = () => { clearInterval(ticker); fill.style.width = "100%"; waitbox.classList.add("is-done"); };
+
   const showError = (message) => {
+    clearInterval(ticker); waitbox.hidden = true;
     wait.textContent = "";
     app.querySelector("#progress-error").innerHTML = `
       <p class="form-error">${esc(message)}</p>
@@ -468,15 +489,12 @@ async function renderProgress(id) {
   };
 
   const tick = async () => {
-    const sec = Math.round((Date.now() - started) / 1000);
-    const api_ = state.etat && state.etat.lecture === "api";
-    wait.textContent = `Lecture du contrat par Claude${d.input.contrat_mots ? `, ${fmtInt(d.input.contrat_mots)} mots` : ""}. ${sec < 60 ? `${sec} s` : `${Math.floor(sec / 60)} min ${String(sec % 60).padStart(2, "0")} s`}.${!api_ && d.statut === "en_attente" && sec > (state.etat && state.etat.github ? 150 : 45) ? " Le dossier attend un lecteur : s'il reste en attente, basculez sur les règles locales." : ""}`;
     try {
       const { dossier } = await api(`/examens/${id}`);
       d = dossier; state.dossier = dossier;
     } catch (err) { wait.textContent = `Connexion au service perdue : ${err.message}`; }
-    if (d.statut === "termine") { items[0].querySelector(".step__detail").textContent = ""; play(d); return; }
-    if (d.statut === "erreur") { showError(`La lecture par Claude a échoué : ${d.erreur || "erreur inconnue"}.`); return; }
+    if (d.statut === "termine") { finish(); items[0].querySelector(".step__detail").textContent = ""; play(d); return; }
+    if (d.statut === "erreur") { showError(`La lecture intégrale a échoué : ${d.erreur || "erreur inconnue"}.`); return; }
     if (d.statut === "en_cours" || d.statut === "en_cours_api") { items[0].classList.add("is-done"); items[0].classList.remove("is-active"); items[1].classList.add("is-active"); }
     pollTimer = setTimeout(tick, POLL_MS);
   };
@@ -788,7 +806,7 @@ async function renderRegistre() {
               <td>${esc(x.fournisseur)}</td>
               <td>${x.verdict ? `<span class="avis__dot avis__dot--${esc(x.verdict)} avis__dot--small" aria-hidden="true"></span>` : ""}${esc(statut(x))}</td>
               <td>${x.score ?? ""}</td>
-              <td>${esc(x.moteur || (x.mode === "claude" ? "Claude" : "règles"))}</td>
+              <td>${esc(x.moteur || (x.mode === "claude" ? "lecture intégrale" : "règles"))}</td>
               <td>${x.validation ? `${esc(x.validation.nom)}, ${esc(x.validation.role)}` : "En attente"}</td>
             </tr>`).join("")}
         </tbody>

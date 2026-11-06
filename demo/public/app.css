@@ -292,7 +292,7 @@ select { padding-right: 36px; }
 .progress { max-width: 720px; }
 
 .progress__title { margin-bottom: 8px; }
-.progress__sub { color: var(--text2); margin-bottom: 36px; }
+.progress__sub { color: var(--text2); margin-bottom: 24px; }
 
 .steps { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
 
@@ -580,7 +580,14 @@ details.fold .fold__body { margin-top: 16px; }
 .mode--off { color: var(--text2); cursor: default; }
 .form-privacy { display: block; margin-top: 24px; max-width: 720px; }
 
-.progress__wait { margin-top: 28px; color: var(--text2); min-height: 1.5em; }
+.progress__wait { margin-top: 12px; color: var(--text2); min-height: 1.5em; }
+.wait { margin: 0 0 32px; }
+.wait__bar { height: 4px; background: var(--bg2); border-radius: 2px; overflow: hidden; }
+.wait__bar span { display: block; height: 100%; width: 0; background: var(--accent); transition: width 1s linear; }
+.wait.is-done .wait__bar span { transition: width 0.4s ease-out; }
+.step.is-active .step__num { animation: step-pulse 1.4s ease-in-out infinite; }
+@keyframes step-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) { .step.is-active .step__num { animation: none; } }
 
 .row__note { margin-top: 8px; font-size: 15px; color: var(--text2); }
 .meta-list--tight { margin-bottom: 20px; }
