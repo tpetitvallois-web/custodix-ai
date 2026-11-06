@@ -21,4 +21,7 @@ new_sqlite_classes = ["Registre"]
 [observability]
 enabled = true
 
-# Secrets (wrangler secret put) : PONT_TOKEN (jeton du pont local), ANTHROPIC_API_KEY (lecture directe par l'API, facultatif).
+# Secrets (wrangler secret put) : PONT_TOKEN (jeton du pont), GITHUB_TOKEN (réveil du workflow GitHub Actions, facultatif), ANTHROPIC_API_KEY (lecture directe par l API, non retenu).
+
+[vars]
+GITHUB_REPO = "tpetitvallois-web/custodix-ai"
